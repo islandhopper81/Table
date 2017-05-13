@@ -1,19 +1,7 @@
 Table version 0.0.1
 
-[ REPLACE THIS...
-
-  The README is used to introduce the module and provide instructions on
-  how to install the module, any machine dependencies it may have (for
-  example C compilers and installed libraries) and any other information
-  that should be understood before the module is installed.
-
-  A README file is required for CPAN modules since CPAN extracts the
-  README file from a module distribution so that people browsing the
-  archive can use it get an idea of the modules uses. It is usually a
-  good idea to provide version information here so that people can
-  decide whether fixes for the module are worth downloading.
-]
-
+This module is yet another implementation of a Table object.  The Table is
+implemented here as an array of arrays.  See the man page(s) for more details.
 
 INSTALLATION
 
@@ -27,7 +15,16 @@ To install this module, run the following commands:
 
 DEPENDENCIES
 
-None.
+Carp
+Readonly
+Class::Std::Utils
+Array::Utils qw(:all)
+Scalar::Util qw(looks_like_number)
+List::MoreUtils qw(any)
+Log::Log4perl qw(:easy)
+Log::Log4perl::CommandLine qw(:all)
+MyX::Generic
+version
 
 
 COPYRIGHT AND LICENCE

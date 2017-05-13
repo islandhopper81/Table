@@ -3,7 +3,7 @@
    "author" : [
       "Scott Yourstone <scott.yourstone.com>"
    ],
-   "dynamic_config" : 0,
+   "dynamic_config" : 1,
    "generated_by" : "Module::Build version 0.422",
    "license" : [
       "artistic_2"
@@ -14,6 +14,11 @@
    },
    "name" : "Table",
    "prereqs" : {
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.42"
+         }
+      },
       "runtime" : {
          "requires" : {
             "Test::More" : "0",

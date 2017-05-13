@@ -1,4 +1,0 @@
-do{ my $x = {
-       'install_base' => '/Users/Scott/perl5'
-     };
-$x; }

@@ -1114,7 +1114,38 @@ This document describes Table version 0.0.1
 =head1 DESCRIPTION
 
 This module is an object for storing and opperating on tables (ie 2D matrix).
+The data structure is implemented as an array of arrays.  The column and row
+names are stored in hashes where the value associated with each name is the
+index at which it is found in the array.  This allows fast access via the column
+and row names.
 
+There are two recommend ways to populate a table object:
+
+1) load_from_file -- this function parses through a plain text file to populate
+the table object.  The first row should be the column headers.  Each row after
+the header line should have a name as the first value.  The sep option can be
+used to specify a delimiter for your file (ie "\t", ",", etc).  This is the
+recommended and most simple way to populate a table object.
+
+2) load_from_href_href -- in Perl a table with column and row names can be
+stored as hash reference of hash references.  If your data is in this format
+the load_from_href_href function assumes the first level of the hash
+reference corresponds with the rows.
+
+3) add_row (or add_col) -- rows (or columns) can be iteratively added.  This
+requires the row and column names to be set previously.  So you basically create
+a table object, set the row and column names, then iteratively add either the
+rows or columns.  This approach is not recommended as it has not be thoroughly
+tested.
+
+It is important to note that the set_value_at function cannot currently be used
+to populate a new table.  It can only be used to edit existing values in a
+table.
+
+Once the table has been created values can be viewed or edited individually, the
+table can be printed, the table can be merged with another table, the table can
+be transposed, etc.  See the methods below for descriptions of operations that
+can be done on Table objects.
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -1194,24 +1225,22 @@ None reported.
 =head2 new
 
 	Title: new
-	Usage: Table->new({
-				arg1 => $arg1,
-				arg2 => $arg2
-			});
-	Function:
+	Usage: Table->new();
+	Function: Initializes an empty Table object
 	Returns: Table
-	Args: -arg1 => DESCRIPTION
-		  -arg2 => DESCRIPTION
-	Throws: MyX::Generic::Undef::Params
-	Comments: NA
+	Args: NA
+	Throws: NA
+	Comments: When this method is called the Table object is completely empty.
+			  It can be populated using one of the 3 methods described in the
+			  description.
 	See Also: NA
 	
-=head2 get_arg1
+=head2 get_row_count
 
-	Title: get_arg1
-	Usage: $obj->get_arg1()
-	Function: Returns arg1
-	Returns: str
+	Title: get_row_count
+	Usage: $obj->get_row_count()
+	Function: Returns the total number of rows in the Table object
+	Returns: int
 	Args: NA
 	Throws: NA
 	Comments: NA
