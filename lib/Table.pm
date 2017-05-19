@@ -1065,7 +1065,7 @@ This document describes Table version 0.0.1
 	my $table = Table->new();
 
 	# load the table from a file
-	$table->load("my_table.txt", "\t");
+	$table->load_from_file("my_table.txt", "\t");
 	
 	# get the number rows and columns
 	my $row_count = $table->get_row_count();
