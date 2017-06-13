@@ -184,6 +184,7 @@ my $logger = get_logger();
 	sub get_row_index {
 		my ($self, $row) = @_;
 		
+		$self->_check_row_name($row);
 		my $r = $row_names_of{ident $self}->{$row};
 		
 		return($r);
@@ -192,6 +193,7 @@ my $logger = get_logger();
 	sub get_col_index {
 		my ($self, $col) = @_;
 		
+		$self->_check_col_name($col);
 		my $c = $col_names_of{ident $self}->{$col};
 		
 		return($c);
@@ -201,41 +203,41 @@ my $logger = get_logger();
 	# Setters #
 	###########
 	sub change_row_name {
-		my ($self, $old, $new) = @_;
+		my ($self, $current, $new) = @_;
 		
-		_is_defined($old, "old name");
+		_is_defined($current, "current name");
 		_is_defined($new, "new name");
 		
-		# check if the old name is in the table
-		if ( ! $self->has_row($old) ) {
+		# check if the current name is in the table
+		if ( ! $self->has_row($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such row name: $old"
+				error => "No such row name: $current"
 			);
 		}
 		
-		my $index = $row_names_of{ident $self}->{$old};
+		my $index = $row_names_of{ident $self}->{$current};
 		$row_names_of{ident $self}->{$new} = $index;
-		delete $row_names_of{ident $self}->{$old};
+		delete $row_names_of{ident $self}->{$current};
 		
 		return 1;
 	}
 	
 	sub change_col_name {
-		my ($self, $old, $new) = @_;
+		my ($self, $current, $new) = @_;
 		
-		_is_defined($old, "old name");
+		_is_defined($current, "current name");
 		_is_defined($new, "new name");
 		
-		# check if the old name is in the table
-		if ( ! $self->has_col($old) ) {
+		# check if the current name is in the table
+		if ( ! $self->has_col($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such column name: $old"
+				error => "No such column name: $current"
 			);
 		}
 		
-		my $index = $col_names_of{ident $self}->{$old};
+		my $index = $col_names_of{ident $self}->{$current};
 		$col_names_of{ident $self}->{$new} = $index;
-		delete $col_names_of{ident $self}->{$old};
+		delete $col_names_of{ident $self}->{$current};
 		
 		return 1;
 	}
@@ -545,7 +547,7 @@ my $logger = get_logger();
 	sub add_row {
 		my ($self, $row_name, $row_vals_aref, $col_names_aref) = @_;
 		
-		# NOTE: if row_names_aref is not provided the rows are
+		# NOTE: if col_names_aref is not provided the rows are
 		# added in the order provided in the row_vals_aref
 		
 		# check the parameters
@@ -615,7 +617,7 @@ my $logger = get_logger();
 		# if the table is currently empty set the col_count and col_name
 		# row_count and row_name values are set in add_row
 		if ( $self->get_col_count() == 0 and $self->get_row_count() == 0 ) {
-			# if the col_names are not defined thow a parameter undef error
+			# if the col_names are not defined throw a parameter undef error
 			my $msg = "col_names -- must be defined when add_row is the first row added to a matrix";
 			_is_defined($col_names_aref, $msg);
 			
@@ -1122,10 +1124,12 @@ and row names.
 There are two recommend ways to populate a table object:
 
 1) load_from_file -- this function parses through a plain text file to populate
-the table object.  The first row should be the column headers.  Each row after
-the header line should have a name as the first value.  The sep option can be
-used to specify a delimiter for your file (ie "\t", ",", etc).  This is the
-recommended and most simple way to populate a table object.
+the table object.  The first row should be the column headers.  The row names
+should not have a header value.  So there should be one fewer header value than
+the total number of columns in the table.  Each row after the header line should
+have a name as the first value.  The sep option can be used to specify a
+delimiter for your file (ie "\t", ",", etc).  This is the recommended and most
+simple way to populate a table object.
 
 2) load_from_href_href -- in Perl a table with column and row names can be
 stored as hash reference of hash references.  If your data is in this format
@@ -1246,28 +1250,402 @@ None reported.
 	Comments: NA
 	See Also: NA
 	
-=head2 set_arg1
+=head2 get_col_count
 
-	Title: set_arg1
-	Usage: $obj->set_arg1($arg1)
-	Function: sets the arg1 value
-	Returns: 1 on success
-	Args: -arg1 => DESCRIPTION
-	Throws: MyX::Generic::Undef::Param
+	Title: get_col_count
+	Usage: $obj->get_col_count()
+	Function: Returns the total number of columns in the Table object
+	Returns: int
+	Args: NA
+	Throws: NA
 	Comments: NA
+	See Also: NA
+	
+=head2 get_row_names
+
+	Title: get_row_names
+	Usage: $obj->get_row_names()
+	Function: Returns the row names in the order of their index
+	Returns: aref
+	Args: NA
+	Throws: NA
+	Comments: NA
+	See Also: NA
+	
+=head2 get_col_names
+
+	Title: get_col_names
+	Usage: $obj->get_col_names()
+	Function: Returns the column names in the order of their index
+	Returns: aref
+	Args: NA
+	Throws: NA
+	Comments: NA
+	See Also: NA
+	
+=head2 get_value_at
+
+	Title: get_value_at
+	Usage: $obj->get_value_at($row, $col)
+	Function: Returns the value at a given row,column pair
+	Returns: scalar (whatever value type is in the Table)
+	Args: -row => row name
+	      -col => col name
+	Throws: MyX::Table::Row::UndefName
+	        MyX::Table::Col::UndefName
+	Comments: This function is not optimized for speed.  I should not be used to
+	          iterate over very large tables.
+	See Also: NA
+	
+=head2 get_row
+
+	Title: get_row
+	Usage: $obj->get_row($row)
+	Function: Returns the row values
+	Returns: aref
+	Args: -row => row name
+	Throws: MyX::Table::Row::UndefName
+	Comments: NA
+	See Also: NA
+	
+=head2 get_col
+
+	Title: get_col
+	Usage: $obj->get_col($col)
+	Function: Returns the col values
+	Returns: aref
+	Args: -col => col name
+	Throws: MyX::Table::Col::UndefName
+	Comments: This function is not optimized for speed.  Because the underlying
+	          data structure is a 2-D array where the first dimension is rows
+			  this function requires a for loop to go through each row and get
+			  each value for the given column.  This will only be a problem on
+			  very large tables.
+	See Also: NA
+	
+=head2 get_row_index
+
+	Title: get_row_index
+	Usage: $obj->get_row_index($row)
+	Function: Returns the row index
+	Returns: int
+	Args: -row => row name
+	Throws: MyX::Table::Row::UndefName
+	Comments: NA
+	See Also: NA
+	
+=head2 get_col_index
+
+	Title: get_col_index
+	Usage: $obj->get_col_index($col)
+	Function: Returns the col index
+	Returns: int
+	Args: -col => col name
+	Throws: MyX::Table::Col::UndefName
+	Comments: NA
+	See Also: NA
+	
+=head2 change_row_name
+
+	Title: change_row_name
+	Usage: $obj->change_row_name($current, $new)
+	Function: Changes a row name
+	Returns: 1 on success
+	Args: -current => current row name
+	      -new => new row name
+	Throws: MyX::Table::Row::UndefName
+	Comments: NA
+	See Also: NA
+
+=head2 change_col_name
+
+	Title: change_col_name
+	Usage: $obj->change_col_name($current, $new)
+	Function: Changes a col name
+	Returns: 1 on success
+	Args: -current => current col name
+	      -new => new col name
+	Throws: MyX::Table::Col::UndefName
+	Comments: NA
+	See Also: NA
+	
+=head2 set_value_at
+
+	Title: set_value_at
+	Usage: $obj->set_value_at($row, $col, $val)
+	Function: Sets the value at a given row,col location in the Table
+	Returns: 1 on success
+	Args: -row => row name
+	      -col => col name
+		  -val => value
+	Throws: MyX::Table::Row::UndefName
+	        MyX::Table::Col::UndefName
+	Comments: NA
+	See Also: NA
+	
+=head2 _set_row_count
+
+	Title: _set_row_count
+	Usage: $obj->_set_row_count($row_count)
+	Function: Sets the row count
+	Returns: 1 on success
+	Args: -row_count => number of rows in the Table
+	Throws: MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+	Comments: PRIVATE!  Do NOT call this method outside of Table.pm.  $row_count
+	          must be an integer greater than 0.
+	See Also: NA
+	
+=head2 _set_col_count
+
+	Title: _set_col_count
+	Usage: $obj->_set_col_count($col_count)
+	Function: Sets the col count
+	Returns: 1 on success
+	Args: -col_count => number of cols in the Table
+	Throws: MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+	Comments: PRIVATE!  Do NOT call this method outside of Table.pm.  $col_count
+	          must be an integer greater than 0.
+	See Also: NA
+	
+=head2 _set_row_names
+
+	Title: _set_row_names
+	Usage: $obj->_set_row_names($row_names_aref)
+	Function: Sets the row names
+	Returns: 1 on success
+	Args: -row_names_aref => array reference of row names
+	Throws: MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+	Comments: PRIVATE!  Do NOT call this method outside of Table.pm.
+	          $row_names_aref must have the same number of names as the number
+			  of rows in the Table AND the row names must be unique (ie no
+			  repeated names)
+	See Also: NA
+	
+=head2 _set_col_names
+
+	Title: _set_col_names
+	Usage: $obj->_set_col_names($col_names_aref)
+	Function: Sets the col names
+	Returns: 1 on success
+	Args: -col_names_aref => array reference of col names
+	Throws: MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+	Comments: PRIVATE!  Do NOT call this method outside of Table.pm.
+	          $col_names_aref must have the same number of names as the number
+			  of columns in the Table AND the column names must be unique (ie no
+			  repeated names)
+	See Also: NA
+	
+=head2 load_from_href_href
+
+	Title: load_from_href_href
+	Usage: $obj->load_from_href_href($href, $row_names_aref, $col_names_aref)
+	Function: Loads the data from an href of hrefs
+	Returns: 1 on success
+	Args: -href => hash reference containing hash references
+	      -row_names_aref => array reference of row names
+		  -col_names_aref => array reference of column names
+	Throws: MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+	Comments: This method loads the data into the Table object from a hash
+	          reference of hash references object.  The first level of the hash
+			  reference should be the rows and the second is columns.  The data
+			  are added to the Table object using a command like this:
+			  $href->{$row}->{$col}.  
+	See Also: NA
+	
+=head2 load_from_file
+
+	Title: load_from_file
+	Usage: $obj->load_from_file($file, $sep)
+	Function: Loads the data from a delimited file
+	Returns: 1 on success
+	Args: -file => path to file
+	      -sep => delimiter string
+	Throws: MyX::Generic::File::CannotOpen
+	        MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+	Comments: This is the recommended method to load data into a Table object.
+	          It assumes the first line is the column names and the first
+			  column is the row names.  The row names column (ie the first
+			  column) should not have a name.
+	See Also: NA
+	
+=head2 _order
+
+	Title: _order
+	Usage: $obj->_order()
+	Function: WARNING - unfinished and untested!  Orders the table by the
+	          indicies in the row and col names hashes.
+	Returns: 1 on success
+	Args: NA
+	Throws: NA
+	Comments: This function is unfinished and untested.  Do NOT use it!
+	See Also: NA
+	
+=head2 save
+
+	Title: save
+	Usage: $obj->save($file, $sep)
+	Function: Outputs the Table as text in the given file
+	Returns: 1 on success
+	Args: -file => path to output file
+	      -sep => delimiter string
+	Throws: MyX::Generic::File::CannotOpen
+	Comments: The default sep value is "\t".
+	See Also: NA
+	
+=head2 to_str
+
+	Title: to_str
+	Usage: $obj->to_str($sep)
+	Function: Returns the Table as a string
+	Returns: str
+	Args: -sep => delimiter string
+	Throws: NA
+	Comments: The default sep value is "\t".
+	See Also: NA
+	
+=head2 add_row
+
+	Title: add_row
+	Usage: $obj->add_row($row_name, $row_vals_aref, $col_names_aref)
+	Function: Adds a row to the Table
+	Returns: 1 on success
+	Args: -row_name => name of row
+	      -row_vals_aref => aref with row values
+		  -col_names_aref => aref with column name for each row value
+	Throws: MyX::Table::Col::UndefName
+	Comments: This function assumes the each row element is in the correct order
+	          meaning that the row values for this row correspond with the
+			  columns alread in the Table.  If you want to add a row that where
+			  the values are not in the same order as the columns in the Table
+			  use the col_names_aref parameter.  When the col_names_aref
+			  parameter is provided, each value in the row_vals_aref will be
+			  added to the table column that corresponds to the column name at
+			  the same index in col_names_aref.  For example, if the table
+			  columns include A, B, C, D, but the values in row_vals_aref
+			  are ordered D, C, B, A then by passing a col_names_aref with
+			  D, C, B, A the values will be added in the correct order.  In the
+			  case when the Table is empty col_names_aref becomes a required
+			  parameter.
+	See Also: NA
+	
+=head2 _add_row_checks
+
+	Title: _add_row_checks
+	Usage: $obj->_add_row_checks($row_name, $row_vals_aref, $col_names_aref)
+	Function: Checks the parameters that are passed to add_row
+	Returns: 1 on success
+	Args: -row_name => name of row
+	      -row_vals_aref => aref with row values
+		  -col_names_aref => aref with column name for each row value
+	Throws: MyX::Table::Row::NameInTable
+	        MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+			MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This functions checks the following:
+			      - makes sure parameter values are defined
+				  - makes sure the row name is not already in the table
+				  - makes sure the row_vals_are is an aref
+				  - makes sure the number of vals in row_vals_aref is equal to
+				    the number of columns in the Table
+				  - makes sure col_names_aref is an aref
+				  - makes sure the number of names in col_names_aref is the same
+				    as the column count
+			  Also if the table is currently empty it will set the column count
+			  and column names based on col_names_aref.  In the case when the
+			  Table is empty col_names_aref becomes a required parameter.
+	See Also: NA
+	
+=head2 add_col
+
+	Title: add_col
+	Usage: $obj->add_col($col_name, $col_vals_aref, $row_names_aref)
+	Function: Adds a column to the Table
+	Returns: 1 on success
+	Args: -col_name => name of col
+	      -col_vals_aref => aref with col values
+		  -row_names_aref => aref with row name for each column value
+	Throws: MyX::Table::Row::UndefName
+	Comments: This function assumes the each col element is in the correct order
+	          meaning that the col values for this col correspond with the
+			  rows alread in the Table.  If you want to add a col where the
+			  values are not in the same order as the rows in the Table use
+			  the row_names_aref parameter.  When the row_names_aref parameter
+			  is provided, each value in the col_vals_aref will be added to the
+			  table row that corresponds to the row name at the same index
+			  in row_names_aref.  For example, if the table rows include
+			  A, B, C, D, but the values in col_vals_aref are ordered D, C, B, A
+			  then by passing a row_names_aref with D, C, B, A the values will
+			  be added in the correct order.  In the case when the Table is
+			  empty row_names_aref becomes a required parameter.
+	See Also: NA
+	
+=head2 _add_col_checks
+
+	Title: _add_col_checks
+	Usage: $obj->_add_col_checks($col_name, $col_vals_aref, $row_names_aref)
+	Function: Checks the parameters that are passed to add_col
+	Returns: 1 on success
+	Args: -col_name => name of col
+	      -col_vals_aref => aref with col values
+		  -row_names_aref => aref with row name for each row value
+	Throws: MyX::Table::Col::NameInTable
+	        MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+			MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This functions checks the following:
+			      - makes sure parameter values are defined
+				  - makes sure the col name is not already in the table
+				  - makes sure the col_vals_are is an aref
+				  - makes sure the number of vals in col_vals_aref is equal to
+				    the number of rows in the Table
+				  - makes sure row_names_aref is an aref
+				  - makes sure the number of names in row_names_aref is the same
+				    as the row count
+			  Also if the table is currently empty it will set the row count
+			  and row names based on row_names_aref.  In the case when the
+			  Table is empty row_names_aref becomes a required parameter.
+	See Also: NA
+	
+=head2 merge
+
+	Title: merge
+	Usage: $obj->merge($params_href)
+	Function: Merges two tables
+	Returns: Table
+	Args: -params_href => href of merging parameters (see Comments)
+	Throws: MyX::Table::Col::NameInTable
+	        MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+			MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: The params_href should have the following features:
+	          params_href{y_tbl => Table,
+			              all_x => boolean,
+						  all_y => boolean}
+			  I don't fully remember how this function works.  
 	See Also: NA
 
 
 =head1 BUGS AND LIMITATIONS
 
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
@@ -1284,11 +1662,9 @@ with the rest of columns.
 
 =head2 add to a repository
 
-add to source forge
-
 =head2 finish documentaiton
 
-ugh, boring, but super important.
+=head2 pollish documentation for merge function
 
 =head1 AUTHOR
 
