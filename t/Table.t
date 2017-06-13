@@ -28,17 +28,17 @@ lives_ok( sub { $table = Table->new() },
 
 # test get_row_count
 {
-    is( $table->get_row_count, 0, "get_row_count");
+    is( $table->get_row_count(), 0, "get_row_count");
 }
 
 # test get_col_count
 {
-    is( $table->get_col_count, 0, "get_col_count");
+    is( $table->get_col_count(), 0, "get_col_count");
 }
 
 # test get_row_names_header when it is undef
 {
-    is( $table->get_row_names_header, undef, "get_row_names_header(undef)");
+    is( $table->get_row_names_header(), undef, "get_row_names_header(undef)");
 }
 
 # test _set_row_names_header
