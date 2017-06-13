@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 138;
+use Test::More tests => 150;
 use Test::Exception;
 use MyX::Table;
 
@@ -34,6 +34,25 @@ lives_ok( sub { $table = Table->new() },
 # test get_col_count
 {
     is( $table->get_col_count, 0, "get_col_count");
+}
+
+# test get_row_names_header when it is undef
+{
+    is( $table->get_row_names_header, undef, "get_row_names_header(undef)");
+}
+
+# test _set_row_names_header
+# AND test has_row_names_header
+{
+    is( $table->has_row_names_header, 0, "has_row_names_header(FALSE)" );
+    
+    lives_ok( sub { $table->_set_row_names_header("rows") },
+             "expect to live");
+    is( $table->get_row_names_header, "rows", "get_row_names_header(undef)");
+    is( $table->has_row_names_header, 1, "has_row_names_header(TRUE)" );
+    
+    # reset the table to not have a row header
+    $table->_set_row_names_header(undef);
 }
 
 # test _set_row_count
@@ -165,6 +184,37 @@ lives_ok( sub { $table = Table->new() },
               "load_from_file -- look at row names" );
     is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
               "load_from_file -- look at col names" );
+    
+    # make sure the row_names_header is undefined
+    is( $table->get_row_names_header(), undef,
+       "load_from_file -- row names header" );
+    is( $table->has_row_names_header(), 0,
+       "load_from_file -- has_row_names_header" );
+    
+    
+    ####
+    # test using the second valid file format which includes a header for the
+    # row names
+    ($fh, $filename) = tempfile();
+    _make_tbl_file2($fh);
+     lives_ok( sub{ $table->load_from_file($filename, ",") },
+             "expected to live -- load_from_file()" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names" );
+    
+    is( $table->get_row_names_header(), "RowNames",
+       "load_from_file - row names header v2" );
+    is( $table->has_row_names_header(), 1,
+       "load_from_file -- has_row_names_header v2" );
+    
+    # reset to use the version 1 table
+    ($fh, $filename) = tempfile();
+    _make_tbl_file($fh);
+    $table->load_from_file($filename, ",");
 }
 
 # test _load_from_href_href
@@ -575,6 +625,29 @@ sub _make_tbl_file {
     # there is a text version of this tree at the bottom
     
     my $str = "A,B,C,D,E
+M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file2 {
+        my ($fh) = @_;
+    
+    # this is basically the same as the function above, but it creates the table
+    # in the second valid format.  This format includes a name for the row names
+    # column.
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "RowNames,A,B,C,D,E
 M,0,3,3,5,5
 N,2,0,3,5,5
 O,3,3,0,4,4

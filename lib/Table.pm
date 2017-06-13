@@ -29,6 +29,7 @@ my $logger = get_logger();
 	my %row_names_of; # a href
 	my %col_names_of; # a href
 	my %mat_of;
+	my %row_names_header_of; 
 	
 	# Getters #
 	sub get_row_count;
@@ -40,6 +41,7 @@ my $logger = get_logger();
 	sub get_col;
 	sub get_row_index;
 	sub get_col_index;
+	sub get_row_names_header;
 
 	# Setters #
 	sub set_value_at;
@@ -47,6 +49,7 @@ my $logger = get_logger();
 	sub _set_col_count;
 	sub _set_row_names;
 	sub _set_col_names;
+	sub _set_row_names_header;
 
 	# Others #
 	sub load_from_file;
@@ -64,6 +67,8 @@ my $logger = get_logger();
 	sub reset; # to do
 	sub has_row;
 	sub has_col;
+	sub has_row_names_header;
+	sub _check_header_format;
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
@@ -103,6 +108,7 @@ my $logger = get_logger();
 		# Set Attributes
 		$new_obj->_set_col_count(0);
 		$new_obj->_set_row_count(0);
+		$new_obj->_set_row_names_header();
 
 		return $new_obj;
 	}
@@ -197,6 +203,12 @@ my $logger = get_logger();
 		my $c = $col_names_of{ident $self}->{$col};
 		
 		return($c);
+	}
+	
+	sub get_row_names_header {
+		my ($self) = @_;
+		
+		return $row_names_header_of{ident $self};
 	}
 
 	###########
@@ -374,6 +386,12 @@ my $logger = get_logger();
 		return 1;
 	}
 	
+	sub _set_row_names_header {
+		my ($self, $row_names_header) = @_;
+		
+		$row_names_header_of{ident $self} = $row_names_header;
+	}
+	
 	##########
 	# Others #
 	##########
@@ -428,13 +446,17 @@ my $logger = get_logger();
 		
 		# the first line should be the column headers
 		# this sets the column counts and names
+		# NOTE: his resets all the attributes that might have been stored
+		# in the $self object
 		chomp(my $headers = <$IN>);
 		my @col_names = split(/$sep/, $headers);
 		$self->_set_col_count(scalar @col_names);
 		$self->_set_col_names(\@col_names);
+		$self->_set_row_names_header(undef);
 		
 		# read in the rows
 		# take of the row names as the rows are input
+		my $is_first_line = 1;
 		my @vals = ();
 		my $row_name;
 		my @row_names = ();
@@ -443,6 +465,12 @@ my $logger = get_logger();
 		foreach my $line ( <$IN> ) { 
 			chomp $line;
 			@vals = split(/$sep/, $line);
+			
+			# use the first line to check the header format
+			if ( $is_first_line == 1 ) {
+				$self->_check_header_format(scalar @vals);
+				$is_first_line = 0;
+			}
 		
 			$row_name = shift @vals;
 			push @row_names, $row_name;
@@ -527,8 +555,13 @@ my $logger = get_logger();
 		
 		my $str = "";
 		
+		# check if a row names header is present
+		if ( $self->has_row_names_header() ) {
+			$str .= $self->get_row_names_header() . $sep;
+		}
+		
 		# print the column headers
-		$str = (join($sep, @{$self->get_col_names()}));
+		$str .= (join($sep, @{$self->get_col_names()}));
 		$str .= "\n";
 		
 		# print the row names and each row in the matrix
@@ -916,6 +949,47 @@ my $logger = get_logger();
 		}
 	}
 	
+	sub has_row_names_header {
+		my ($self) = @_;
+		
+		if ( defined $row_names_header_of{ident $self} ) {
+			return 1;
+		}
+		
+		# else
+		return 0;
+	}
+	
+	sub _check_header_format {
+		my ($self, $line_vals_count) = @_;
+		
+		if ( $line_vals_count - 1 == $self->get_col_count() ) {
+			# this is the case where the number of header values is the same
+			# as the number of items in the row when you exclude the row name.
+			# here I want to do nothing
+			;
+		}
+		elsif ( $line_vals_count == $self->get_col_count() ) {
+			# in this case the rows were given a header value
+			# remove that header value from the column names, but record it
+			# in the row_names_header attribute
+			my @col_names_arr = @{$self->get_col_names()};
+			my $row_names_header = shift @col_names_arr;
+			$self->_set_row_names_header($row_names_header);
+			$self->_set_col_count(scalar @col_names_arr);
+			$self->_set_col_names(\@col_names_arr);
+		}
+		else {
+			# in this case there must be an error.  the number of headers in no
+			# way matches the number of values in row one
+			MyX::Table::BadDim->throw(
+				error => "Headers count doesn't match row 1 values count"
+			);
+		}
+		
+		return 1;
+	}
+	
 	sub _aref_to_href {
 		my ($aref) = @_;
 		
@@ -1125,11 +1199,10 @@ There are two recommend ways to populate a table object:
 
 1) load_from_file -- this function parses through a plain text file to populate
 the table object.  The first row should be the column headers.  The row names
-should not have a header value.  So there should be one fewer header value than
-the total number of columns in the table.  Each row after the header line should
-have a name as the first value.  The sep option can be used to specify a
-delimiter for your file (ie "\t", ",", etc).  This is the recommended and most
-simple way to populate a table object.
+can have a header value.  Each row after the header line should have a name as
+the first value.  The sep option can be used to specify a delimiter for your
+file (ie "\t", ",", etc).  This is the recommended and most simple way to
+populate a table object.
 
 2) load_from_href_href -- in Perl a table with column and row names can be
 stored as hash reference of hash references.  If your data is in this format
@@ -1195,6 +1268,7 @@ None reported.
 	sub get_col;
 	sub get_row_index;
 	sub get_col_index;
+	sub get_row_names_header;
 
 	# Setters #
 	sub set_value_at;
@@ -1202,19 +1276,24 @@ None reported.
 	sub _set_col_count;
 	sub _set_row_names;
 	sub _set_col_names;
+	sub _set_row_names_header;
 
 	# Others #
 	sub load_from_file;
-	sub load_from_href_href; # to do
+	sub load_from_href_href;
 	sub save;
 	sub to_str;
 	sub add_row;
 	sub _add_row_checks;
 	sub add_col;
 	sub _add_col_checks;
-	sub merge; # to do
+	sub merge;
 	sub transpose; # to do
 	sub reset; # to do
+	sub has_row;
+	sub has_col;
+	sub has_row_names_header;
+	sub _check_header_format;
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
@@ -1345,6 +1424,18 @@ None reported.
 	Comments: NA
 	See Also: NA
 	
+=head2 get_row_names_header
+
+	Title: get_row_names_header
+	Usage: $obj->get_row_names_header()
+	Function: Returns the row names header if it is set
+	Returns: str or undef
+	Args: NA
+	Throws: NA
+	Comments: The row names header is not required.  In the case where it is not
+	          set this function returns undef
+	See Also: NA
+	
 =head2 change_row_name
 
 	Title: change_row_name
@@ -1439,6 +1530,17 @@ None reported.
 			  repeated names)
 	See Also: NA
 	
+=head2 _set_row_names_header
+
+	Title: _set_row_names_header
+	Usage: $obj->_set_row_names_header($row_names_header)
+	Function: Sets the row names header
+	Returns: 1 on success
+	Args: -row_names_header => row names header string
+	Throws: NA
+	Comments: If $row_names_header is not provided this is set to undef.
+	See Also: NA
+	
 =head2 load_from_href_href
 
 	Title: load_from_href_href
@@ -1473,7 +1575,7 @@ None reported.
 	Comments: This is the recommended method to load data into a Table object.
 	          It assumes the first line is the column names and the first
 			  column is the row names.  The row names column (ie the first
-			  column) should not have a name.
+			  column) may have a name, but it is not required.
 	See Also: NA
 	
 =head2 _order
@@ -1642,7 +1744,39 @@ None reported.
 						  all_y => boolean}
 			  I don't fully remember how this function works.  
 	See Also: NA
+	
+=head2 _check_merge_params
 
+=head2 has_row
+
+=head2 has_col
+
+=head2 has_row_names_header
+
+	Title: has_row_names_header
+	Usage: $obj->has_row_names_header()
+	Function: Checks if the table object has a row name header string
+	Returns: bool (0 | 1)
+	Args: NA
+	Throws: NA
+	Comments: NA 
+	See Also: NA
+
+=head2 _check_header_format
+
+	Title: _check_header_format
+	Usage: $obj->_check_header_format($first_line_vals_count)
+	Function: Checks if one of the column headers is the row name header
+	Returns: bool (0 | 1)
+	Args: -first_line_vals_count => number of values in first line
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  It checks the first non-header line in
+			  the file to deterimine if the first value in the column headers
+			  is actually the row header name.  The row header name is optional.
+			  If the row header name is provided it is removed from the column
+			  names array and stored in the row_names_header attribute.
+	See Also: NA
 
 =head1 BUGS AND LIMITATIONS
 
