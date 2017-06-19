@@ -1061,11 +1061,7 @@ my $logger = get_logger();
 		my ($self, $col) = @_;
 		
 		# check if the col parameter is defined
-		if ( ! defined $col ) {
-			MyX::Generic::Undef::Param->throw(
-				error => "Undefined parameter value (col)"
-			);
-		}
+		_is_defined($col, "col");
 		
 		# check if the col exists in the table
 		my $col_href = $col_names_of{ident $self};
@@ -1184,7 +1180,11 @@ This document describes Table version 0.0.1
 	# add a column using the method add_col by the same pattern as add_row
 	
 	# merge two tables
-	# TO DO
+	$merged_tbl = $tbl1->merge({
+		y_tbl => $tbl2,
+		all_x => "T",
+		all_y => "T"
+	})
   
   
 =head1 DESCRIPTION
@@ -1193,7 +1193,10 @@ This module is an object for storing and opperating on tables (ie 2D matrix).
 The data structure is implemented as an array of arrays.  The column and row
 names are stored in hashes where the value associated with each name is the
 index at which it is found in the array.  This allows fast access via the column
-and row names.
+and row names.  The column names should be unique and the row names should be
+unique.  In other words, there cannot be two rows with the name "A".  Similarly,
+there cannot be two columns with the name "A".  There can be one column named
+"A" and one row names "A" in the same table.
 
 There are two recommend ways to populate a table object:
 
@@ -1742,14 +1745,72 @@ None reported.
 	          params_href{y_tbl => Table,
 			              all_x => boolean,
 						  all_y => boolean}
-			  I don't fully remember how this function works.  
+			  The "x" value parameters correspond to calling Table object (ie
+			  the table object that invokes the merge function.  The "y" value
+			  parameters correspond to the other Table object.  So the y_tbl is
+			  a Table object that will be mered with the calling table object
+			  (ie. the "x" table).
+			  
+			  The outcome of merging depends on how these parameters are set.
+			  When all_x and all_y are set to true the union of all rows and
+			  columns are in the merged table.  When all_x is set to false only
+			  the rows that intersect with the rows in the y table are included
+			  in the final merged table.  Similarly, when all_y is set to false
+			  only the rows that intersect with the rows in the y table are
+			  included in the final merged table.  The columns in the resulting
+			  merged table are ALWAYS the union of columns in x and y.  When
+			  there are two columns with the same name and "_y" is appended to
+			  the column from the "y" table to make it a unique header value.
+			  Remember, a Table must have unique column names and unique row
+			  names.
 	See Also: NA
 	
 =head2 _check_merge_params
 
+	Title: _check_merge_params
+	Usage: _check_merge_params($params_href)
+	Function: Checks the merge parameters for errors
+	Returns: Table
+	Args: -params_href => href of merging parameters (see Comments)
+	Throws: MyX::Table::Col::NameInTable
+	        MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+			MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm. The params_href should have the
+			  following features:
+	          params_href{y_tbl => Table,
+			              all_x => boolean,
+						  all_y => boolean}
+			  This checks to make sure y_tbl is a Table object, makes sure all_x
+			  is defined and is a boolean, and makes sure all_y is defined and
+			  is a boolean.
+	See Also: Table::merge
+
 =head2 has_row
 
+	Title: has_row
+	Usage: $obj->has_row($row)
+	Function: Checks if the table object has the specified row
+	Returns: bool (0 | 1)
+	Args: -row => name of the row to look for
+	Throws: MyX::Generic::Undef::Param
+	Comments: NA 
+	See Also: NA
+
 =head2 has_col
+
+	Title: has_col
+	Usage: $obj->has_col($col)
+	Function: Checks if the table object has the specified col
+	Returns: bool (0 | 1)
+	Args: -col => name of the col to look for
+	Throws: MyX::Generic::Undef::Param
+	Comments: NA 
+	See Also: NA
 
 =head2 has_row_names_header
 
@@ -1777,6 +1838,115 @@ None reported.
 			  If the row header name is provided it is removed from the column
 			  names array and stored in the row_names_header attribute.
 	See Also: NA
+	
+=head2 _aref_to_href
+
+	Title: _aref_to_href
+	Usage: _aref_to_href($aref)
+	Function: Transforms an array reference into a hash reference
+	Returns: hash ref
+	Args: -aref => an array reference
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  The value associated with each key in
+			  the returned hash reference is the index at which that key was
+			  found in the given array reference.
+	See Also: NA
+	
+=head2 _check_file
+
+	Title: _check_file
+	Usage: _check_file($file)
+	Function: Runs some checks on a file
+	Returns: 1 on success
+	Args: -file => path to a file
+	Throws: MyX::Generic::Undef::Param
+	        MyX::Generic::DoesNotExist::File
+			MyX::Generic::File::Empty
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This function will throw errors if the
+			  file parameter is not defined, if the file does not exist, or if
+			  the file is empty.
+	See Also: NA
+	
+=head2 _set_sep
+
+	Title: _set_sep
+	Usage: _set_sep($sep)
+	Function: Checks the seperater value to make sure it is defined
+	Returns: str
+	Args: -sep => seperater string
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  If the sep parameter is not defined
+			  the defualt is returned.  Currently the default is set to "\t".
+	See Also: NA
+	
+=head2 _check_row_name
+
+	Title: _check_row_name
+	Usage: _check_row_name($row)
+	Function: Checks a row name to ensure it is defined and exists in the table
+	Returns: 1 on success
+	Args: -row => row name
+	Throws: MyX::Generic::Undef::Param
+	        MyX::Table::Row::UndefName
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.
+	See Also: NA
+	
+=head2 _check_col_name
+
+	Title: _check_col_name
+	Usage: _check_col_name($row)
+	Function: Checks a col name to ensure it is defined and exists in the table
+	Returns: 1 on success
+	Args: -col => column name
+	Throws: MyX::Generic::Undef::Param
+	        MyX::Table::Col::UndefName
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.
+	See Also: NA
+	
+=head2 _is_defined
+
+	Title: _is_defined
+	Usage: _is_defined($val $val_name)
+	Function: Checks if a value is defined
+	Returns: 1 on success
+	Args: -val => a value
+	      -val_name => value name (for printing error messages)
+	Throws: MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.
+	See Also: NA
+	
+=head2 _is_aref
+
+	Title: _is_aref
+	Usage: _is_aref($aref $name)
+	Function: Checks if a value is an array reference
+	Returns: 1 on success
+	Args: -aref => array reference
+	      -name => name of the aref variable (for printing error messages)
+	Throws: MyX::Generic::Ref::UnsupportedType
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.
+	See Also: NA
+	
+=head2 _to_bool
+
+	Title: _to_bool
+	Usage: _to_bool($val)
+	Function: Converts a boolean-like value to either 0 or 1
+	Returns: bool
+	Args: -val => a boolean-like value
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  Boolean-like values include:  Y, YES,
+			  Yes, y, yes, T, t, TRUE, true, True.  Anything that is not
+			  included in that list is considered false (ie 0).
+	See Also: NA
 
 =head1 BUGS AND LIMITATIONS
 
@@ -1793,12 +1963,6 @@ L<http://rt.cpan.org>.
 
 When I read in the table there could be columns that are not square
 with the rest of columns.
-
-=head2 add to a repository
-
-=head2 finish documentaiton
-
-=head2 pollish documentation for merge function
 
 =head1 AUTHOR
 
