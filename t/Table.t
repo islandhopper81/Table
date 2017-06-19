@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 150;
+use Test::More tests => 158;
 use Test::Exception;
 use MyX::Table;
 
@@ -612,6 +612,39 @@ C,10,11,NA,NA
 D,NA,NA,12,13
 ";
     is( $merged->to_str(","), $str, "to_str after merge(t2) (extra Y rows)" );
+}
+
+# test copy
+{
+    # create some test tables
+    my $t1 = Table->new();
+    my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    
+    my $copy;
+    lives_ok( sub{ $copy = $t1->copy() },
+             "expected to live -- copy()" );
+    
+    is_deeply($t1, $copy, "copy()" );
+}
+
+# test reset
+{
+    # create some test tables
+    my $t1 = Table->new();
+    my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    
+    lives_ok( sub{ $t1->reset() } ,
+             "expected to live -- reset()" );
+    
+    # note that when there are no row or column names the get_row_names and
+    # get_col_names functions return an empty array reference.
+    my @empty = ();
+    is_deeply( $t1->get_row_names(), \@empty, "reset() -- row names" );
+    is_deeply( $t1->get_col_names(), \@empty, "reset() -- col names" );
+    
+    is( $t1->get_row_count(), 0, "reset() -- row count" );
+    is( $t1->get_col_count(), 0, "reset() -- col count" );
+    is( $t1->get_row_names_header(), undef, "reset() -- row names header" );
 }
 
 

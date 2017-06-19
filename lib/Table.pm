@@ -65,6 +65,7 @@ my $logger = get_logger();
 	sub _check_merge_params;
 	sub transpose; # to do
 	sub reset; # to do
+	sub copy; # to do
 	sub has_row;
 	sub has_col;
 	sub has_row_names_header;
@@ -921,6 +922,68 @@ my $logger = get_logger();
 		}
 		
 		return($params_href);
+	}
+	
+	sub transpose {
+		my ($self) = @_;
+		
+		#   A B C
+		# X 1 2 3
+		# Y 4 5 6
+		# Z 7 8 9
+		
+		#   X Y Z
+		# A 1 4 7
+		# B 2 5 8
+		# C 3 6 9
+		
+		# make a copy of self to temporarily preserve the data
+		
+		# reset self
+		
+		# create the empty table with the correct dimentions
+		
+		# Set the col names in the new table as the row names from the old table
+		
+		# Set the row names in the new table as the col names from the old table
+		
+		# for each column in the old table add that column as a row in the
+		# new table
+	}
+	
+	sub reset {
+		my ($self) = @_;
+		
+		$self->_set_row_count(0);
+		$self->_set_col_count(0);
+		$row_names_of{ident $self} = undef;
+		$col_names_of{ident $self} = undef;
+		$row_names_header_of{ident $self} = undef;
+		$mat_of{ident $self} = undef;
+	}
+	
+	sub copy {
+		my ($self) = @_;
+		
+		my $copy = Table->new();
+		
+		# set the dimentions
+		$copy->_set_row_count($self->get_row_count());
+		$copy->_set_col_count($self->get_col_count());
+		
+		# set the row and col names
+		$copy->_set_row_names($self->get_row_names());
+		$copy->_set_col_names($self->get_col_names());
+		
+		# copy the row names header
+		$copy->_set_row_names_header($self->get_row_names_header());
+		
+		# copy each row of data from self to copy
+		foreach my $r ( @{$self->get_row_names()} ) {
+			$copy->add_row($self->get_row($r));
+		}
+		
+		return($copy);
 	}
 	
 	sub has_row {
