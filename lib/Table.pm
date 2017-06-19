@@ -63,9 +63,9 @@ my $logger = get_logger();
 	sub _add_col_checks;
 	sub merge;
 	sub _check_merge_params;
-	sub transpose; # to do
-	sub reset; # to do
-	sub copy; # to do
+	sub transpose;
+	sub reset;
+	sub copy;
 	sub has_row;
 	sub has_col;
 	sub has_row_names_header;
@@ -93,16 +93,6 @@ my $logger = get_logger();
 		croak 'Constructor called on existing object instead of class'
 			if ref $class;
 
-		# Make sure the required parameters are defined
-		# right now there are NO required parameters
-		#if ( any {!defined $_}
-		#	) {
-		#	MyX::Generic::Undef::Params->throw(
-		#		error => 'Undefined parameter value',
-		#		usage => $NEW_USAGE,
-		#	);
-		#}
-
 		# Bless a scalar to instantiate an object
 		my $new_obj = bless \do{my $anon_scalar}, $class;
 
@@ -110,6 +100,14 @@ my $logger = get_logger();
 		$new_obj->_set_col_count(0);
 		$new_obj->_set_row_count(0);
 		$new_obj->_set_row_names_header();
+		
+		# I added these lines because they solved a problem I was having when
+		# trying to make a copy of self in the transpose method.  Note that I
+		# can't simply call _set_col_names(undef) or _set_row_names(undef)
+		# because those methods call _is_defined to make sure I'm setting the
+		# rows or columns to something that is defined.
+		$col_names_of{ident $new_obj} = undef;
+		$row_names_of{ident $new_obj} = undef;
 
 		return $new_obj;
 	}
@@ -927,28 +925,25 @@ my $logger = get_logger();
 	sub transpose {
 		my ($self) = @_;
 		
-		#   A B C
-		# X 1 2 3
-		# Y 4 5 6
-		# Z 7 8 9
-		
-		#   X Y Z
-		# A 1 4 7
-		# B 2 5 8
-		# C 3 6 9
-		
 		# make a copy of self to temporarily preserve the data
+		my $orig = $self->copy();
 		
 		# reset self
+		$self->reset();
 		
-		# create the empty table with the correct dimentions
-		
-		# Set the col names in the new table as the row names from the old table
-		
-		# Set the row names in the new table as the col names from the old table
+		# set the row names header
+		$self->_set_row_names_header($orig->get_row_names_header());
 		
 		# for each column in the old table add that column as a row in the
 		# new table
+		foreach my $c ( @{$orig->get_col_names()} ) {
+			$self->add_row($c, $orig->get_col($c), $orig->get_row_names());
+		}
+		
+		# delete the temporary original object
+		# ? not sure how to do this.  It's probably not neccessary anyway
+		
+		return 1;
 	}
 	
 	sub reset {
@@ -960,6 +955,8 @@ my $logger = get_logger();
 		$col_names_of{ident $self} = undef;
 		$row_names_header_of{ident $self} = undef;
 		$mat_of{ident $self} = undef;
+		
+		return 1;
 	}
 	
 	sub copy {
@@ -967,20 +964,13 @@ my $logger = get_logger();
 		
 		my $copy = Table->new();
 		
-		# set the dimentions
-		$copy->_set_row_count($self->get_row_count());
-		$copy->_set_col_count($self->get_col_count());
-		
-		# set the row and col names
-		$copy->_set_row_names($self->get_row_names());
-		$copy->_set_col_names($self->get_col_names());
-		
 		# copy the row names header
 		$copy->_set_row_names_header($self->get_row_names_header());
 		
 		# copy each row of data from self to copy
 		foreach my $r ( @{$self->get_row_names()} ) {
-			$copy->add_row($self->get_row($r));
+			my $row = $self->get_row($r);
+			$copy->add_row($r, $self->get_row($r), $self->get_col_names());
 		}
 		
 		return($copy);
@@ -1354,8 +1344,9 @@ None reported.
 	sub add_col;
 	sub _add_col_checks;
 	sub merge;
-	sub transpose; # to do
-	sub reset; # to do
+	sub transpose;
+	sub reset;
+	sub copy;
 	sub has_row;
 	sub has_col;
 	sub has_row_names_header;
@@ -1701,7 +1692,9 @@ None reported.
 			  are ordered D, C, B, A then by passing a col_names_aref with
 			  D, C, B, A the values will be added in the correct order.  In the
 			  case when the Table is empty col_names_aref becomes a required
-			  parameter.
+			  parameter.  Note that if the row_name is already in the table an
+			  error will be thrown.  You cannot overwrite an existing row using
+			  this method.
 	See Also: NA
 	
 =head2 _add_row_checks
@@ -1756,7 +1749,9 @@ None reported.
 			  A, B, C, D, but the values in col_vals_aref are ordered D, C, B, A
 			  then by passing a row_names_aref with D, C, B, A the values will
 			  be added in the correct order.  In the case when the Table is
-			  empty row_names_aref becomes a required parameter.
+			  empty row_names_aref becomes a required parameter. Note that if
+			  the col_name is already in the table an error will be thrown.
+			  You cannot overwrite an existing column using this method.
 	See Also: NA
 	
 =head2 _add_col_checks
@@ -1852,6 +1847,41 @@ None reported.
 			  is defined and is a boolean, and makes sure all_y is defined and
 			  is a boolean.
 	See Also: Table::merge
+
+=head2 transpose
+
+	Title: transpose
+	Usage: $obj->transpose()
+	Function: Transposes the table
+	Returns: 1 on success
+	Args: NA
+	Throws: NA
+	Comments: NA
+	See Also: NA
+	
+=head2 reset
+
+	Title: reset
+	Usage: $obj->reset()
+	Function: Clears all the data in the object
+	Returns: 1 on success
+	Args: NA
+	Throws: NA
+	Comments: Warning: once you call this method there is no going backward.
+	          All the data that was contained in the table is perminantly
+			  deleted.
+	See Also: NA
+
+=head2 copy
+
+	Title: copy
+	Usage: my $copy = $obj->copy()
+	Function: Makes a copy of the object
+	Returns: Table object
+	Args: NA
+	Throws: NA
+	Comments: NA 
+	See Also: NA
 
 =head2 has_row
 

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 158;
+use Test::More tests => 173;
 use Test::Exception;
 use MyX::Table;
 
@@ -619,12 +619,27 @@ D,NA,NA,12,13
     # create some test tables
     my $t1 = Table->new();
     my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
     
     my $copy;
     lives_ok( sub{ $copy = $t1->copy() },
              "expected to live -- copy()" );
     
-    is_deeply($t1, $copy, "copy()" );
+    #is_deeply($t1, $copy, "copy()" );
+    is( $copy->get_row_count(), $t1->get_row_count(),
+       "copy() -- get row count" );
+    is( $copy->get_col_count(), $t1->get_col_count(),
+       "copy() -- get col count" );
+    is_deeply($copy->get_col_names(), $t1->get_col_names(),
+              "copy() -- get col names");
+    is_deeply($copy->get_row_names(), $t1->get_row_names(),
+              "copy() -- get row names");
+    is($copy->get_row_names_header(), $t1->get_row_names_header(),
+       "copy() -- get row names header");
+    is_deeply($copy->get_row("A"), $t1->get_row("A"),
+              "copy() -- checking row A");
+    is_deeply($copy->get_row("B"), $t1->get_row("B"),
+              "copy() -- checking row B");
 }
 
 # test reset
@@ -632,6 +647,7 @@ D,NA,NA,12,13
     # create some test tables
     my $t1 = Table->new();
     my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
     
     lives_ok( sub{ $t1->reset() } ,
              "expected to live -- reset()" );
@@ -645,6 +661,38 @@ D,NA,NA,12,13
     is( $t1->get_row_count(), 0, "reset() -- row count" );
     is( $t1->get_col_count(), 0, "reset() -- col count" );
     is( $t1->get_row_names_header(), undef, "reset() -- row names header" );
+}
+
+# test transpose
+{
+    # create some test tables
+    my $t1 = Table->new();
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    foreach my $r ( @{$t1->get_row_names()} ) {
+        #print "t/r: $r\n";
+    }
+    
+    lives_ok( sub{ $t1->transpose() } ,
+             "expected to live -- transpose()" );
+    
+    is( $t1->get_row_count(), 3, "transpose() -- get row count" );
+    is( $t1->get_col_count(), 2, "transpose() -- get col count" );
+    
+    my @new_row_names = ("a", "b", "c");
+    is_deeply( $t1->get_row_names(), \@new_row_names,
+              "transpose -- row names" );
+    
+    my @new_col_names = ("A", "B");
+    is_deeply( $t1->get_col_names(), \@new_col_names,
+              "transpose -- col names" );
+    
+    # I'm only explicetly checking a few of the values in the table
+    is( $t1->get_value_at("a", "A"), 1, "transpose() -- get_value_at(a,A)");
+    is( $t1->get_value_at("a", "B"), 3, "transpose() -- get_value_at(a,A)");
+    is( $t1->get_value_at("b", "A"), 2, "transpose() -- get_value_at(a,A)");
+    is( $t1->get_value_at("b", "B"), 4, "transpose() -- get_value_at(a,A)");
 }
 
 
