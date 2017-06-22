@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 173;
+use Test::More tests => 200;
 use Test::Exception;
 use MyX::Table;
 
@@ -695,6 +695,103 @@ D,NA,NA,12,13
     is( $t1->get_value_at("b", "B"), 4, "transpose() -- get_value_at(a,A)");
 }
 
+# test _decrement_name_indicies
+{
+    my $href = {"A" => 0, "B" => 1, "C" => 2};
+    my $i = 1;
+    
+    # The following test is as if I'm droping row (or col) "B".
+    # Note that the _decrement_name_indicies function does not remove the name
+    # itself.  So in the expected href (exp) B still remains and it's index is
+    # still the same.  It is removed in the drop_row or drop_col function.
+    my $exp = {"A" => 0, "B" => 1, "C" => 1};
+    
+    lives_ok( sub{ Table::_decrement_name_indicies($href, $i) },
+             "expected to live -- _decremenet_name_indicies" );
+    is_deeply( $href, $exp, "_decrement_name_indicies()" );
+}
+
+# test drop row
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    throws_ok( sub{ $t->drop_row() },
+              'MyX::Generic::Undef::Param',
+              "caught - drop_row(undef)" );
+    throws_ok( sub{ $t->drop_row("Y") },
+              'MyX::Table::Row::UndefName',
+              "caught - drop_row(Y)" );
+    
+    # drop row A
+    lives_ok( sub{ $t->drop_row("A") },
+             "expected to live -- drop_row(A)" );
+    is( $t->get_row_count(), 1, "drop_row(A) -- get row count" );
+    is( $t->has_row("A"), 0, "drop_row(A) -- has row A is false" );
+    is( $t->get_row_index("B"), 0, "drop_row(A) -- get new B index" );
+    is( $t->get_value_at("B","a"), 3, "drop_row(A) -- get value at (B,a)" );
+    
+    throws_ok( sub{ $t->get_value_at("A", "a") },
+              'MyX::Table::Row::UndefName',
+              "caught - drop_row(A) -- after dropping" );
+    
+    # When I drop all the rows I should get an empty table
+    # So now that I dropped row A above I can try dropping row B
+    lives_ok( sub{ $t->drop_row("B") },
+             "expected to live -- drop_row(B)" );
+    is( $t->get_row_count(), 0, "drop_row(B) -- get row count on empty table" );
+    is( $t->get_col_count(), 0, "drop_row(B) -- get col count on empty table" );
+}
+
+# test drop col
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    throws_ok( sub{ $t->drop_col() },
+              'MyX::Generic::Undef::Param',
+              "caught - drop_col(undef)" );
+    throws_ok( sub{ $t->drop_col("A") },
+              'MyX::Table::Col::UndefName',
+              "caught - drop_col(A)" );
+    
+    # drop col a
+    lives_ok( sub{ $t->drop_col("a") },
+             "expected to live -- drop_col(a)" );
+    is( $t->get_col_count(), 2, "drop_col(a) -- get col count" );
+    is( $t->has_col("a"), 0, "drop_col(a) -- has col a is false" );
+    is( $t->get_col_index("b"), 0, "drop_col(a) -- get new b index" );
+    is( $t->get_value_at("A","b"), 2, "drop_col(a) -- get value at (A,b)" );
+    
+    throws_ok( sub{ $t->get_value_at("A", "a") },
+              'MyX::Table::Col::UndefName',
+              "caught - drop_col(a) -- after dropping" );
+    
+    # What happens when I drop all the cols from the Table
+    # So now that I dropped col a above I can try dropping cols b and c
+    lives_ok( sub{ $t->drop_col("b") },
+             "expected to live -- drop_col(b)" );
+    lives_ok( sub{ $t->drop_col("c") },
+             "expected to live -- drop_col(c)" );
+    is( $t->get_row_count(), 0, "drop_col() -- get row count on empty table" );
+    is( $t->get_col_count(), 0, "drop_col() -- get col count on empty table" );
+}
+
+# test is_empty
+{
+    my $t = Table->new();
+    
+    is( $t->is_empty(), 1, "is_empty() -- true" );
+    
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    is( $t->is_empty(), 0, "is_empty() -- false" );
+}
 
 
 ###############

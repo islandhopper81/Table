@@ -61,6 +61,11 @@ my $logger = get_logger();
 	sub _add_row_checks;
 	sub add_col;
 	sub _add_col_checks;
+	sub drop_row;
+	sub _drop_row_checks;
+	sub drop_col;
+	sub _drop_col_checks;
+	sub _decrement_name_indicies;
 	sub merge;
 	sub _check_merge_params;
 	sub transpose;
@@ -69,6 +74,7 @@ my $logger = get_logger();
 	sub has_row;
 	sub has_col;
 	sub has_row_names_header;
+	sub is_empty;
 	sub _check_header_format;
 	sub _aref_to_href;
 	sub _check_file;
@@ -550,6 +556,11 @@ my $logger = get_logger();
 	sub to_str {
 		my ($self, $sep) = @_;
 		
+		# if the table is empty return an empty string
+		if ( $self->is_empty() ) {
+			return "";
+		}
+		
 		$sep = _set_sep($sep);
 		
 		my $str = "";
@@ -787,6 +798,113 @@ my $logger = get_logger();
 		return 1;
 	}
 	
+	sub drop_row {
+		my ($self, $row_name) = @_;
+		
+		$self->_drop_row_checks($row_name);
+		
+		# get the index of the row
+		my $row_i = $self->get_row_index($row_name);
+		
+		splice @{$mat_of{ident $self}}, $row_i, 1;
+		
+		# subtract one from row count
+		$self->_set_row_count($self->get_row_count - 1);
+		
+		# adjust the indicies in the row_names_of attribute
+		my $row_names_of_href = $row_names_of{ident $self};
+		_decrement_name_indicies($row_names_of_href, $row_i);
+		
+		# remove the key fromt he row_nams_of href
+		delete $row_names_of_href->{$row_name};
+		
+		# if there are no more rows then reset the table
+		if ( $self->is_empty() ) {
+			$self->reset();
+		}
+		
+		return 1;
+	}
+	
+	sub _drop_row_checks {
+		my ($self, $row_name) = @_;
+		
+		# make sure the parameter values are defined
+		_is_defined($row_name, "row_name");
+		
+		# ensure the row is actually in the table
+		if ( ! $self->has_row($row_name) ) {
+			MyX::Table::Row::UndefName->throw(
+				error => "Row ($row_name) is not in Table",
+				name => $row_name
+			);
+		}
+		
+		return 1;
+	}
+	
+	sub drop_col {
+		my ($self, $col_name) = @_;
+		
+		$self->_drop_col_checks($col_name);
+		
+		# get the index of the col
+		my $col_i = $self->get_col_index($col_name);
+		
+		for ( my $i = 0; $i < $self->get_row_count(); $i++ ) {
+			splice(@{$mat_of{ident $self}->[$i]}, $col_i, 1);
+		}
+		
+		# subtract one from row count
+		$self->_set_col_count($self->get_col_count - 1);
+		
+		# adjust the indicies in the col_names_of attribute
+		my $col_names_of_href = $col_names_of{ident $self};
+		_decrement_name_indicies($col_names_of_href, $col_i);
+		
+		# remove the key fromt he row_nams_of href
+		delete $col_names_of_href->{$col_name};
+		
+		# if there are no more cols then reset the table
+		if ( $self->is_empty() ) {
+			$self->reset();
+		}
+		
+		return 1;
+	}
+	
+	sub _drop_col_checks {
+		my ($self, $col_name) = @_;
+		
+		# make sure the parameter values are defined
+		_is_defined($col_name, "col_name");
+		
+		# ensure the row is actually in the table
+		if ( ! $self->has_col($col_name) ) {
+			MyX::Table::Col::UndefName->throw(
+				error => "Col ($col_name) is not in Table",
+				name => $col_name
+			);
+		}
+		
+		return 1;
+	}
+	
+	sub _decrement_name_indicies {
+		my ($href, $i) = @_;
+		
+		my $val;
+		foreach my $key ( keys %{$href} ) {
+			#print "key: $key\n";
+			$val = $href->{$key};
+			if ( $val > $i ) {
+				$href->{$key} = $val - 1;
+			}
+		}
+		
+		return 1;
+	}
+	
 	sub merge{
 		my ($self, $params_href) = @_;
 		
@@ -1011,6 +1129,17 @@ my $logger = get_logger();
 		
 		# else
 		return 0;
+	}
+	
+	sub is_empty {
+		my ($self) = @_;
+		
+		if ( $self->get_row_count() <= 0 or
+			 $self->get_col_count() <= 0  ) {
+			return 1;  # TRUE
+		}
+		
+		return 0; # FALSE
 	}
 	
 	sub _check_header_format {
@@ -1343,6 +1472,11 @@ None reported.
 	sub _add_row_checks;
 	sub add_col;
 	sub _add_col_checks;
+	sub drop_row;
+	sub _drop_row_checks;
+	sub drop_col;
+	sub _drop_col_checks;
+	sub _decrement_name_indicies;
 	sub merge;
 	sub transpose;
 	sub reset;
@@ -1350,6 +1484,7 @@ None reported.
 	sub has_row;
 	sub has_col;
 	sub has_row_names_header;
+	sub is_empty;
 	sub _check_header_format;
 	sub _aref_to_href;
 	sub _check_file;
@@ -1785,6 +1920,54 @@ None reported.
 			  Table is empty row_names_aref becomes a required parameter.
 	See Also: NA
 	
+=head2 drop_row
+
+	Title: drop_row
+	Usage: $obj->drop_row($row_name)
+	Function: Removes the given row from the table
+	Returns: 1 on success
+	Args: -row_name => name of row
+	Throws: MyX::Table::Row::UndefName
+			MyX::Generic::Undef::Param
+	Comments: NA
+	See Also: NA
+	
+=head2 _drop_row_checks
+
+	Title: _drop_row_checks
+	Usage: $obj->_drop_row_checks($row_name)
+	Function: Removes the given row from the table
+	Returns: 1 on success
+	Args: -row_name => name of row
+	Throws: MyX::Table::Row::UndefName
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This functions checks the following:
+			      - makes sure parameter values are defined
+				  - makes sure the row exists in the table
+	See Also: NA
+	
+=head2 _decrement_name_indicies
+
+	Title: _decrement_name_indicies
+	Usage: _decrement_name_indicies($href, $i)
+	Function: Adjusts the indicies in the row and col names hrefs after a row or
+	          col is removed from the table
+	Returns: 1 on success
+	Args: -href => either the col or the row names href
+	      -i => the index that was removed
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This functions decrements the indicies
+			  in the row or col name href.  Remember the row and col names are
+			  stored as features in this object.  They are stored as hash
+			  references where the key is the name and the value is the index
+			  in the table.  When a row or col is removed this function
+			  decrements the indicies of the rows (or cols) after the row (or
+			  col) that was removed.
+	See Also: drop_row
+	          drop_col
+	
 =head2 merge
 
 	Title: merge
@@ -1914,6 +2097,18 @@ None reported.
 	Args: NA
 	Throws: NA
 	Comments: NA 
+	See Also: NA
+	
+=head2 is_empty
+
+	Title: is_empty
+	Usage: $obj->is_empty()
+	Function: Checks if the table object is empty
+	Returns: bool (0 | 1)
+	Args: NA
+	Throws: NA
+	Comments: This function only looks at the col and row counts.  If either of
+			  those is at 0 then the table must be empty.
 	See Also: NA
 
 =head2 _check_header_format
