@@ -1947,6 +1947,33 @@ None reported.
 				  - makes sure the row exists in the table
 	See Also: NA
 	
+=head2 drop_col
+
+	Title: drop_col
+	Usage: $obj->drop_col($row_name)
+	Function: Removes the given col from the table
+	Returns: 1 on success
+	Args: -col_name => name of col
+	Throws: MyX::Table::Col::UndefName
+			MyX::Generic::Undef::Param
+	Comments: NA
+	See Also: NA
+	
+=head2 _drop_col_checks
+
+	Title: _drop_col_checks
+	Usage: $obj->_drop_col_checks($col_name)
+	Function: Removes the given col from the table
+	Returns: 1 on success
+	Args: -col_name => name of col
+	Throws: MyX::Table::Col::UndefName
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This functions checks the following:
+			      - makes sure parameter values are defined
+				  - makes sure the col exists in the table
+	See Also: NA
+	
 =head2 _decrement_name_indicies
 
 	Title: _decrement_name_indicies
