@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 200;
+use Test::More tests => 204;
 use Test::Exception;
 use MyX::Table;
 
@@ -321,6 +321,14 @@ B,3,4
     is( $table->get_value_at("M", "A"), 0, "get_value_at(M,A)" );
     is( $table->get_value_at("Q", "A"), 5, "get_value_at(M,A)" );
     is( $table->get_value_at("O", "D"), 4, "get_value_at(M,A)" );
+}
+
+# test get_value_at_fast
+{
+    is( $table->get_value_at_fast(0,0), 0, "get_value_at_fast(0,0)" );
+    is( $table->get_value_at_fast(0,1), 3, "get_value_at_fast(0,1)" );
+    is( $table->get_value_at_fast(1,0), 2, "get_value_at_fast(1,0)" );
+    is( $table->get_value_at_fast(1,1), 0, "get_value_at_fast(1,1)" );
 }
 
 # test set_value_at
