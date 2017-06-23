@@ -13,6 +13,7 @@ use Exception::Class (
     
     'MyX::Table::NamesNotUniq' => {
         isa => 'MyX::Table',
+        fields => ['dim'],
     },
     
     'MyX::Table::Row' => {
@@ -156,7 +157,7 @@ see Exception::Class and Exception::Class::Base.
     Catch Usage: if ( my $e = MyX::Table::NamesNotUniq->caught() ) { ... }
     Function: Throw/Catch a MyX::Table::NamesNotUniq exception when the names in
               the rows or cols are not unique
-    Fields: NA
+    Fields: dim => dimension where the names are not unique (ie row | col)
     Inherits: MyX::Table
     Comments: NA
     See Also: NA
