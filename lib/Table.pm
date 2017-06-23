@@ -37,6 +37,7 @@ my $logger = get_logger();
 	sub get_row_names;
 	sub get_col_names;
 	sub get_value_at;
+	sub get_value_at_fast;
 	sub get_row;
 	sub get_col;
 	sub get_row_index;
@@ -163,6 +164,16 @@ my $logger = get_logger();
 		
 		my $r = $self->get_row_index($row);
 		my $c = $self->get_col_index($col);
+		
+		return($mat_of{ident $self}->[$r][$c]);
+	}
+	
+	sub get_value_at_fast {
+		my ($self, $r, $c) = @_;
+		
+		# WARNING: It is not advised to call this method directly.  In other
+		# wards treat it as a private method.  See documentation for more
+		# details
 		
 		return($mat_of{ident $self}->[$r][$c]);
 	}
@@ -1449,6 +1460,7 @@ None reported.
 	sub get_row_names;
 	sub get_col_names;
 	sub get_value_at;
+	sub get_value_at_fast;
 	sub get_row;
 	sub get_col;
 	sub get_row_index;
@@ -1565,8 +1577,26 @@ None reported.
 	Throws: MyX::Table::Row::UndefName
 	        MyX::Table::Col::UndefName
 	Comments: This function is not optimized for speed.  I should not be used to
-	          iterate over very large tables.
+	          iterate over very large tables.  For iterating over the table use
+			  a Table::Iter object.
 	See Also: NA
+	
+=head2 get_value_at_fast
+
+	Title: get_value_at_fast
+	Usage: $obj->get_value_at_fast($r, $c)
+	Function: Returns the value at a given row,column pair
+	Returns: scalar (whatever value type is in the Table)
+	Args: -r => row index
+	      -c => col index
+	Throws: NA
+	Comments: WARNING!!  This method should not be called directly; treat it as
+	          private.  It does not do error check (ie to see if the row and col
+			  indicies are valid).  This method is called from Table::Iter.  To
+			  get an individual value from the table use the get_value_at()
+			  function.  To iterate over the table use a Table::Iter object.
+	See Also: get_value_at()
+			  Table::Iter
 	
 =head2 get_row
 
@@ -2283,6 +2313,19 @@ with the rest of columns.
 
 I think there is a more efficient way to implement the reset function
 that will explicenetly free up the memory.
+
+=head2 a melt function
+
+Similar to the melt function in R
+
+=head2 an iterater function
+
+Get each element in the table one at a time.  It might be useful to utilize the
+melt function here.
+
+=head2 make a table iterator object
+
+for iterating through each element in the table.
 
 =head1 AUTHOR
 
