@@ -1,6 +1,6 @@
 package MyX::Table;
 
-use version; our $VERSION = qv('4.1.3');
+use version; our $VERSION = qv('0.0.1');
 
 use Exception::Class (
     'MyX::Table' => {
@@ -13,7 +13,6 @@ use Exception::Class (
     
     'MyX::Table::NamesNotUniq' => {
         isa => 'MyX::Table',
-        fields => ['dim'],
     },
     
     'MyX::Table::Row' => {
@@ -62,12 +61,11 @@ __END__
 #######
 =head1 NAME
 
-MTToolbox::MyX::MTParams - A hierarchy of exceptions that can be used in
-                           MTToolbox::MTParams
+MyX::Table - A hierarchy of exceptions that can be used in Table.pm
 
 =head1 VERSION
 
-This documentation refers to MTToolbox::MyX::MTParams version 4.1.3.
+This documentation refers to MyX::Table version 0.0.1.
 
 =head1 Included Modules
 
@@ -79,17 +77,17 @@ This documentation refers to MTToolbox::MyX::MTParams version 4.1.3.
 
 =head1 SYNOPSIS
 
-    # Throw a MTToolbox::MyX::MTParams exception
-    use MTToolbox::MyX::MTParams;
+    # Throw a MyX::Table::BadDim exception
+    use MyX::Table;
     if ( ... ) {   # Some code looking for an error
-        MTToolbox::MyX::MTParams->throw(
-                            error => 'A MTParams execption'
+        MyX::Table::BadDim->throw(
+                            error => 'An execption'
                             );
     }
     
     # In caller catch the MTToolbox::MYX::MTParams exception
     eval { ... };
-    if ( my $e = MTToolbox::MyX::MTParams->caught() ) {
+    if ( my $e = MyX::Table::BadDim->caught() ) {
         # Do something to handle the exception like print an error message
         print $e->error(), " via package ", $e->package(), " at ", $e->file,
             " line ", $e->line();
@@ -98,8 +96,8 @@ This documentation refers to MTToolbox::MyX::MTParams version 4.1.3.
 
 =head1 DESCRIPTION
 
-MTToolbox::MyX::MTParams holds a hierarchy of exception classes that can be used
-in MTToolbox::MTParams objects
+MyX::Table holds a hierarchy of exception classes that can be used in Table
+objects
 
 For more information what can be done when throwing and catching an exception
 see Exception::Class and Exception::Class::Base.
@@ -108,135 +106,156 @@ see Exception::Class and Exception::Class::Base.
 
 =over
 
-    MTToolbox::MyX::MTParams
-    MTToolbox::MyX::MTParams::MissingRequiredTag
-    MTToolbox::MyX::MTParams::MissingTagValue
-    MTToolbox::MyX::MTParams::UnrecognizedTag
-    MTToolbox::MyX::MTParams::MissingExec
-    MTToolbox::MyX::MTParams::LongLinker
-    MTToolbox::MyX::MTParams::UnrecognizedChar
-    MTToolbox::MyX::MTParams::BadSeqType
-        
+    MyX::Table
+    MyX::Table::BadDim
+    MyX::Table::NamesNotUniq
+    MyX::Table::Row
+    MyX::Table::Row::UndefName
+    MyX::Table::Col
+    MyX::Table::Col::UndefName
+    MyX::Table::Row::NameInTable
+    MyX::Table::Col::NameInTable
+    MyX::Table::Merge
+    
     
 =back
 
 =head1 CLASSES DESCRIPTION
 
-=head2 MTToolbox::MyX::MTParams
+=head2 MyX::Table
     
-    Title: MTToolbox::MyX::MTParams
-    Throw Usage: MTToolbox::MyX::MTParams->throw(
+    Title: MyX::Table
+    Throw Usage: MyX::Table->throw(
                     error => 'Any MTParams error message'
                 );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams exception
+    Catch Usage: if ( my $e = MyX::Table->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table exception
     Fields: error => an error message
     Inherits: NA
     Comments: NA
     See Also: NA
 
-=head2 MTToolbox::MyX::MTParams::MissingRequiredTag
+=head2 MyX::Table::BadDim
 
-    Title: MTToolbox::MyX::MTParams::MissingRequiredTag
-    Throw Usage: MTToolbox::MyX::MTParams::MissingRequiredTag->throw(
-                    tag_name => $tag,
+    Title: MyX::Table::BadDim
+    Throw Usage: MyX::Table::BadDim->throw(
+                    dim => $dim,
                 );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::MissingRequiredTag->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::MissingRequiredTag
-              exception when a required tag is missing.
-    Fields: tag_name => The name of the missing tag
-    Inherits: MTToolbox::MyX::MTParams
+    Catch Usage: if ( my $e = MyX::Table::BadDim->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::BadDim exception when the dimensions do
+              not match.
+    Fields: dim => dimensions string
+    Inherits: MyX::Table
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::MissingTagValue
+=head2 MyX::Table::NamesNotUniq
 
-    Title: MTToolbox::MyX::MTParams::MissingTagValue
-    Throw Usage: MTToolbox::MyX::MTParams::MissingTagValue->throw(
-                    tag_name => $tag,
-                );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::MissingTagValue->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::MissingTagValue exception
-              when a tag is missing a value (i.e. it is undefined).
-    Fields: tag_name => The name of the missing tag missing a value
-    Inherits: MTToolbox::MyX::MTParams
+    Title: MyX::Table::NamesNotUniq
+    Throw Usage: MyX::Table::NamesNotUniq->throw();
+    Catch Usage: if ( my $e = MyX::Table::NamesNotUniq->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::NamesNotUniq exception when the names in
+              the rows or cols are not unique
+    Fields: NA
+    Inherits: MyX::Table
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::UnrecognizedTag
+=head2 MyX::Table::Row
 
-    Title: MTToolbox::MyX::MTParams::UnrecognizedTag
-    Throw Usage: MTToolbox::MyX::MTParams::UnrecognizedTag->throw(
-                    tag_name => $tag,
-                );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::UnrecognizedTag->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::UnrecognizedTag exception
-              when a unrecognized tag is found.
-    Fields: tag_name => The name of the unrecognized tag
-    Inherits: MTToolbox::MyX::MTParams
+    Title: MyX::Table::Row
+    Throw Usage: MyX::Table::Row->throw();
+    Catch Usage: if ( my $e = MyX::Table::Row->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Row exception when an error with a row
+              is encountered.
+    Fields: NA
+    Inherits: MyX::Table
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::MissingExec
+=head2 MyX::Table::Row::UndefName
 
-    Title: MTToolbox::MyX::MTParams::MissingExec
-    Throw Usage: MTToolbox::MyX::MTParams::MissingExec->throw(
-                    exec_name => $exec,
+    Title: MyX::Table::Row::UndefName
+    Throw Usage: MyX::Table::Row::UndefName->throw(
+                    name => $row_name
                 );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::MissingExec->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::MissingExec exception when
-              an executable file cannot be found.
-    Fields: exec_name => The name of the missing executable
-    Inherits: MTToolbox::MyX::MTParams
+    Catch Usage: if ( my $e = MyX::Table::Row::UndefName->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Row::UndefName exception when an
+              exception is encounted with an undefined row name
+    Fields: name => name of the row
+    Inherits: MyX::Table::Row
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::LongLinker
+=head2 MyX::Table::Col
 
-    Title: MTToolbox::MyX::MTParams::LongLinker
-    Throw Usage: MTToolbox::MyX::MTParams::LongLinker->throw(
-                    orientation => 'fwd',
-                    length => 25,
-                );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::LongLinker->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::LongLinker exception when
-              an linker is very long.  Perhaps the user made a mistake because
-              linkers are generally very short (i.e. 2-5 bp).
-    Fields: orientation => The fwd or rev linker
-            length => The length of the linker
-    Inherits: MTToolbox::MyX::MTParams
+    Title: MyX::Table::Col
+    Throw Usage: MyX::Table::Col->throw();
+    Catch Usage: if ( my $e = MyX::Table::Col->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Col exception when an error with a col
+              is encountered.
+    Fields: NA
+    Inherits: MyX::Table
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::UnrecognizedChar
+=head2 MyX::Table::Col::UndefName
 
-    Title: MTToolbox::MyX::MTParams::UnrecognizedChar
-    Throw Usage: MTToolbox::MyX::MTParams::UnrecognizedChar->throw(
-                    char => $char,
+    Title: MyX::Table::Col::UndefName
+    Throw Usage: MyX::Table::Col::UndefName->throw(
+                    name => $col_name
                 );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::UnrecognizedChar->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::UnrecognizedChar exception
-              when an character is unrecognized or not allowed in that context.
-    Fields: char => The character that is unrecognized or not allowed
-    Inherits: MTToolbox::MyX::MTParams
+    Catch Usage: if ( my $e = MyX::Table::Col::UndefName->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Col::UndefName exception when an
+              exception is encounted with an undefined column name
+    Fields: name => name of the column
+    Inherits: MyX::Table::Col
     Comments: NA
     See Also: NA
     
-=head2 MTToolbox::MyX::MTParams::BadSeqType
+=head2 MyX::Table::Row::NameInTable
 
-    Title: MTToolbox::MyX::MTParams::BadSeqType
-    Throw Usage: MTToolbox::MyX::MTParams::BadSeqType->throw(
-                    value => $seq_type,
+    Title: MyX::Table::Row::NameInTable
+    Throw Usage: MyX::Table::Row::NameInTable->throw(
+                    name => $row_name
                 );
-    Catch Usage: if ( my $e = MTToolbox::MyX::MTParams::BadSeqType->caught() ) { ... }
-    Function: Throw/Catch a MTToolbox::MyX::MTParams::BadSeqType exception when
-              an sequence type is unrecognized.  Seq type can be set as either
-              1, 2, or 3 for SE, PE w/ overlap, or PE w/o overlap respectively
-    Fields: value => The unaccepted seq type value
-    Inherits: MTToolbox::MyX::MTParams
+    Catch Usage: if ( my $e = MyX::Table::Row::NameInTable->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Row::NameInTable exception when
+              a row is already in the table.  There cannot be duplicate row
+              names
+    Fields: name => name of the row
+    Inherits: MyX::Table::Row
     Comments: NA
     See Also: NA
-        
+    
+=head2 MyX::Table::Col::NameInTable
+
+    Title: MyX::Table::Col::NameInTable
+    Throw Usage: MyX::Table::Col::NameInTable->throw(
+                    name => $col_name
+                );
+    Catch Usage: if ( my $e = MyX::Table::Col::NameInTable->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Col::NameInTable exception when
+              a col is already in the table.  There cannot be duplicate column
+              names
+    Fields: name => name of the col
+    Inherits: MyX::Table::Col
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Merge
+
+    Title: MyX::Table::Merge
+    Throw Usage: MyX::Table::Merge->throw();
+    Catch Usage: if ( my $e = MyX::Table::Merge->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Merge exception
+              when soemthing goes wrong in a merge operation
+    Fields: NA
+    Inherits: MyX::Table
+    Comments: NA
+    See Also: NA
+
+
 =head1 BUGS AND LIMITATIONS
 
 No bugs have been reported.

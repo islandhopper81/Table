@@ -2279,6 +2279,11 @@ L<http://rt.cpan.org>.
 When I read in the table there could be columns that are not square
 with the rest of columns.
 
+=head2 optimize reset function
+
+I think there is a more efficient way to implement the reset function
+that will explicenetly free up the memory.
+
 =head1 AUTHOR
 
 Scott Yourstone  C<< scott.yourstone81@gmail.com >>
