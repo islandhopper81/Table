@@ -1,6 +1,8 @@
 package Table;
 
 use MyX::Table;
+use Table::Iter;
+use MyX::Table::Iter;
 
 use warnings;
 use strict;

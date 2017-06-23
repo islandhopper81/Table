@@ -1,15 +1,18 @@
 use strict;
 use warnings;
 
-use Test::More tests => 204;
+use Test::More tests => 206;
 use Test::Exception;
 use MyX::Table;
 
 # others to include
 use File::Temp qw/ tempfile tempdir /;
 
-BEGIN { use_ok( 'Table' ); }
-BEGIN { use_ok( 'MyX::Table'); }
+BEGIN { use_ok('Table' ); }
+BEGIN { use_ok('MyX::Table'); }
+BEGIN { use_ok('Table::Iter'); }
+BEGIN { use_ok('MyX::Table::Iter'); }
+
 
 
 # helper subroutines

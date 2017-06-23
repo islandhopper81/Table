@@ -86,7 +86,7 @@ This documentation refers to MyX::Table version 0.0.1.
                             );
     }
     
-    # In caller catch the MTToolbox::MYX::MTParams exception
+    # In caller catch the MyX::Table::Iter exception
     eval { ... };
     if ( my $e = MyX::Table::BadDim->caught() ) {
         # Do something to handle the exception like print an error message
@@ -127,7 +127,7 @@ see Exception::Class and Exception::Class::Base.
     
     Title: MyX::Table
     Throw Usage: MyX::Table->throw(
-                    error => 'Any MTParams error message'
+                    error => 'Any error message'
                 );
     Catch Usage: if ( my $e = MyX::Table->caught() ) { ... }
     Function: Throw/Catch a MyX::Table exception
