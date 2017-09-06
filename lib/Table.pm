@@ -2306,6 +2306,9 @@ L<http://rt.cpan.org>.
 
 =head1 TO DO
 
+=head2 check what happens with row_name_header when adding rows
+or columns and providing the third argument.
+
 =head2 check for columns without correct number
 
 When I read in the table there could be columns that are not square
