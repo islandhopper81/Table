@@ -1483,6 +1483,11 @@ This document describes Table version 0.0.1
 		all_x => "T",
 		all_y => "T"
 	})
+	
+	# order by column
+	my $numeric = 1; # TRUE
+	my $decending = 1; # TRUE
+	$table->order($col_name, $numeric, $decending);
   
   
 =head1 DESCRIPTION
@@ -1524,6 +1529,15 @@ Once the table has been created values can be viewed or edited individually, the
 table can be printed, the table can be merged with another table, the table can
 be transposed, etc.  See the methods below for descriptions of operations that
 can be done on Table objects.
+
+The Table object is stored as a 2-d array.  This 2-d array can be queried and
+edited using the described methods in conjuction with the row and column names.
+Each column name is linked the index of the corresponding column values found in
+the 2-d array.  The column names are also linked to an ordering.  This allows
+the column order to change without actually changing the structure of the 2-d
+array.  Therefore with the order subroutine is invoked the column name ordering
+attributes are changed, but the 2-d table remains unchanged.  Then if the Table
+is printed it is output by the specidied order.
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -1929,7 +1943,9 @@ None reported.
 		  -decreasing => bool indicating to do a decreasing sort
 	Throws: MyX::Table::Col::UndefName
 	        MyX::Generic::Undef::Param
-	Comments: To Do:
+	Comments: By default $numeric is set to TRUE and decreasing is set to TRUE.
+	
+	           To Do:
 				- Pass the parameters using a hash.  Currently if you want to
 				  set decreasing you also MUST set numeric.
 				- add ability to sort by a given row
