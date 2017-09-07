@@ -194,6 +194,9 @@ do NOT put the get_next_val in the while loop.  Zero values will cause your
 iteration to terminate prematurely is you do that because zero is also evaluated
 by perl as FALSE.
 
+Also, if the Table that you are interating over has been sorted by row or
+column, the iteration will still happen in the order of the unsorted Table.
+
 =head1 CONFIGURATION AND ENVIRONMENT
   
 Table requires no configuration files or environment variables.

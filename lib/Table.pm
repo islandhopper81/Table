@@ -30,6 +30,8 @@ my $logger = get_logger();
 	my %col_count_of;
 	my %row_names_of; # a href
 	my %col_names_of; # a href
+	my %row_names_order_of; # a href
+	my %col_names_order_of; # a href
 	my %mat_of;
 	my %row_names_header_of; 
 	
@@ -57,7 +59,7 @@ my $logger = get_logger();
 	# Others #
 	sub load_from_file;
 	sub load_from_href_href;
-	sub _order; # to do
+	sub order; # to finish!
 	sub save;
 	sub to_str;
 	sub add_row;
@@ -85,6 +87,7 @@ my $logger = get_logger();
 	sub _check_row_name;
 	sub _check_col_name;
 	sub _is_aref;
+	sub _check_defined;
 	sub _is_defined;
 	sub _to_bool;
 	
@@ -113,10 +116,18 @@ my $logger = get_logger();
 		# I added these lines because they solved a problem I was having when
 		# trying to make a copy of self in the transpose method.  Note that I
 		# can't simply call _set_col_names(undef) or _set_row_names(undef)
-		# because those methods call _is_defined to make sure I'm setting the
+		# because those methods call _check_defined to make sure I'm setting the
 		# rows or columns to something that is defined.
 		$col_names_of{ident $new_obj} = undef;
 		$row_names_of{ident $new_obj} = undef;
+		
+		# I added these attributes so that I could easily reorder the col or
+		# rows in a memrory efficient manner
+		$col_names_order_of{ident $new_obj} = undef;
+		$row_names_order_of{ident $new_obj} = undef;
+		
+		# I added this to help again with the copy subroutine
+		$mat_of{ident $new_obj} = undef;
 
 		return $new_obj;
 	}
@@ -137,21 +148,49 @@ my $logger = get_logger();
 	}
 	
 	sub get_row_names {
-		my ($self) = @_;
+		my ($self, $by_index) = @_;
 		
-		# returns the names in an array ref as sorted by their index
-		my $names_href = $row_names_of{ident $self};
-		my @arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		# set the default for by_index
+		if ( ! _is_defined($by_index) ) {
+			$by_index = 0; # FALSE
+		}
+		
+		my @arr = ();
+		
+		if ( _to_bool($by_index) ) {
+			# returns the names in an array ref ordered by their table index
+			my $names_href = $row_names_of{ident $self};
+			@arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		}
+		else {
+			# returns the names in an array ref ordered by their defined order
+			my $names_href = $row_names_order_of{ident $self};
+			@arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		}
 		
 		return(\@arr);
 	}
 	
 	sub get_col_names {
-		my ($self) = @_;
+		my ($self, $by_index) = @_;
 		
-		# returns the names in an array ref as sorted by their index
-		my $names_href = $col_names_of{ident $self};
-		my @arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		# set the default for by_index
+		if ( ! _is_defined($by_index) ) {
+			$by_index = 0; # FALSE
+		}
+		
+		my @arr = ();
+		
+		if ( _to_bool($by_index) ) {
+			# returns the names in an array ref ordered by their table index
+			my $names_href = $col_names_of{ident $self};
+			@arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		}
+		else {
+			# returns the names in an array ref ordered by their defined order
+			my $names_href = $col_names_order_of{ident $self};
+			@arr = sort { $names_href->{$a} <=> $names_href->{$b} } keys(%$names_href);
+		}
 		
 		return(\@arr);
 	}
@@ -198,7 +237,10 @@ my $logger = get_logger();
 		my $c = $self->get_col_index($col);
 		
 		my @col_arr = ();
+		my $i = 0;
+
 		foreach my $row_aref ( @{$mat_of{ident $self}} ) {
+			$i++;
 			push @col_arr, $row_aref->[$c];
 		}
 		
@@ -235,13 +277,13 @@ my $logger = get_logger();
 	sub change_row_name {
 		my ($self, $current, $new) = @_;
 		
-		_is_defined($current, "current name");
-		_is_defined($new, "new name");
+		_check_defined($current, "current name");
+		_check_defined($new, "new name");
 		
 		# check if the current name is in the table
 		if ( ! $self->has_row($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such row name: $current"
+				error => "No such row name: $current\n"
 			);
 		}
 		
@@ -249,25 +291,33 @@ my $logger = get_logger();
 		$row_names_of{ident $self}->{$new} = $index;
 		delete $row_names_of{ident $self}->{$current};
 		
+		my $pos = $row_names_order_of{ident $self}->{$current};
+		$row_names_order_of{ident $self}->{$new} = $pos;
+		delete $row_names_order_of{ident $self}->{$current};
+		
 		return 1;
 	}
 	
 	sub change_col_name {
 		my ($self, $current, $new) = @_;
 		
-		_is_defined($current, "current name");
-		_is_defined($new, "new name");
+		_check_defined($current, "current name");
+		_check_defined($new, "new name");
 		
 		# check if the current name is in the table
 		if ( ! $self->has_col($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such column name: $current"
+				error => "No such column name: $current\n"
 			);
 		}
 		
 		my $index = $col_names_of{ident $self}->{$current};
 		$col_names_of{ident $self}->{$new} = $index;
 		delete $col_names_of{ident $self}->{$current};
+		
+		my $pos = $col_names_order_of{ident $self}->{$current};
+		$col_names_order_of{ident $self}->{$new} = $pos;
+		delete $col_names_order_of{ident $self}->{$current};
 		
 		return 1;
 	}
@@ -294,19 +344,19 @@ my $logger = get_logger();
 		my ($self, $row_count) = @_;
 		
 		# check if the parameter is defined
-		_is_defined($row_count, "row_count");
+		_check_defined($row_count, "row_count");
 
 		# check if row_count is a number
 		if ( ! looks_like_number($row_count) ) {
 			MyX::Generic::Digit::MustBeDigit->throw(
-				error => "row_count parameter must be a digit > 0"
+				error => "row_count parameter must be a digit > 0\n"
 			);
 		}
 		
 		# make sure the number is >= 0
 		if ( $row_count < 0 ) {
 			MyX::Generic::Digit::TooSmall->throw(
-				error => "row_count parameter must be a digit > 0"
+				error => "row_count parameter must be a digit > 0\n"
 			);
 		}
 		
@@ -319,19 +369,19 @@ my $logger = get_logger();
 		my ($self, $col_count) = @_;
 		
 		# check if the parameter is defined
-		_is_defined($col_count, "col_count");
+		_check_defined($col_count, "col_count");
 		
 		# check if col_count is a number
 		if ( ! looks_like_number($col_count) ) {
 			MyX::Generic::Digit::MustBeDigit->throw(
-				error => "col_count parameter must be a digit > 0"
+				error => "col_count parameter must be a digit > 0\n"
 			);
 		}
 		
 		# make sure the number is >= 0
 		if ( $col_count < 0 ) {
 			MyX::Generic::Digit::TooSmall->throw(
-				error => "col_count parameter must be a digit > 0"
+				error => "col_count parameter must be a digit > 0\n"
 			);
 		}
 		
@@ -348,26 +398,28 @@ my $logger = get_logger();
 		# 2. the row names must be unique (ie no repeats)
 		
 		# check if the parameter is defined
-		_is_defined($row_names_aref, "row_names_aref");
+		_check_defined($row_names_aref, "row_names_aref");
 		
 		# check rule 1
 		if ( $self->get_row_count() != scalar @{$row_names_aref} ) {
 			MyX::Table::BadDim->throw(
-				error => "Col count and number of row names does NOT match",
+				error => "Col count and number of row names does NOT match\n",
 				dim => "Col"
 			);
 		}
 		
 		# check rule 2
 		my $row_names_href = _aref_to_href($row_names_aref);
+		my $row_names_order_href = _aref_to_href($row_names_aref);
 		if ( $self->get_row_count() != scalar(keys %{$row_names_href}) ) {
 			MyX::Table::NamesNotUniq->throw(
-				error => "Col names not unique",
+				error => "Col names not unique\n",
 				dim => "Col"
 			);
 		}
 		
 		$row_names_of{ident $self} = $row_names_href;
+		$row_names_order_of{ident $self} = $row_names_order_href;
 		
 		return 1;
 	}
@@ -380,26 +432,28 @@ my $logger = get_logger();
 		# 2. the col names must be unique (ie no repeats)
 		
 		# check if the parameter is defined
-		_is_defined($col_names_aref, "col_names_aref");
+		_check_defined($col_names_aref, "col_names_aref");
 		
 		# check rule 1
 		if ( $self->get_col_count() != scalar @{$col_names_aref} ) {
 			MyX::Table::BadDim->throw(
-				error => "Col count and number of col names does NOT match",
+				error => "Col count and number of col names does NOT match\n",
 				dim => "Col"
 			);
 		}
 		
 		# check rule 2
 		my $col_names_href = _aref_to_href($col_names_aref);
+		my $col_names_order_href = _aref_to_href($col_names_aref);
 		if ( $self->get_col_count() != scalar(keys %{$col_names_href}) ) {
 			MyX::Table::NamesNotUniq->throw(
-				error => "Col names not unique",
+				error => "Col names not unique\n",
 				dim => "Col"
 			);
 		}
 		
 		$col_names_of{ident $self} = $col_names_href;
+		$col_names_order_of{ident $self} = $col_names_order_href;
 		
 		return 1;
 	}
@@ -418,9 +472,9 @@ my $logger = get_logger();
 		
 		# NOTE: I assume the first level in the href is rows
 		
-		_is_defined($href, "href");
-		_is_defined($row_names_aref, "row names");
-		_is_defined($col_names_aref, "col names");
+		_check_defined($href, "href");
+		_check_defined($row_names_aref, "row names");
+		_check_defined($col_names_aref, "col names");
 		_is_aref($row_names_aref);
 		_is_aref($col_names_aref);
 		
@@ -458,7 +512,7 @@ my $logger = get_logger();
 		
 		open my $IN, "<", $file or
 			MyX::Generic::File::CannotOpen->throw(
-				error => "Cannot read file",
+				error => "Cannot read file\n",
 				file_name => $file
 			);
 		
@@ -510,39 +564,64 @@ my $logger = get_logger();
 		return 1;
 	}
 	
-	sub _order {
-		my ($self) = @_;
-		# IMPORTNAT!!!! --- This function is not finihsed or tested!
+	sub order {
+		my ($self, $col_name, $numeric, $decending) = @_;
 		
-		# this function orders the table by the indicies in the row and
-		# col names hashes
+		# TO DO
+		# 1. change the way the params are passed.  Use a hash.  Currently if
+		#	 you want to use either numeric or decending you must use both
 		
-		my @ordered_rows = $self->get_row_names();
-		my @ordered_cols = $self->get_col_names();
-		my @tbl = ();
-		foreach my $row ( @ordered_rows ) {
-			my @row_arr = ();
-			push @tbl, \@row_arr;
+		# col_name checks
+		_check_defined($col_name, "col_name");
+		if ( ! $self->has_col($col_name) ) {
+			MyX::Table::Col::UndefName->throw(
+				error => "Col ($col_name) is not in Table\n",
+				name => $col_name
+			);
 		}
 		
+		# check numeric
+		if ( ! _is_defined($numeric) ) {
+			$numeric = 0; # FALSE
+		}
+		else {
+			$numeric = _to_bool($numeric);
+		}
+		
+		# check decending
+		if ( ! _is_defined($decending) ) {
+			$decending = 0; # FALSE
+		}
+		
+		# get the row order by sorting the given col
+		# NOTE: there is probably a faster way to create the unsorted hash
+		my %unsorted = ();
+		foreach my $r ( @{$self->get_row_names()} ) {
+			$unsorted{$r} = $self->get_value_at($r, $col_name);
+		}
+		
+		# get the list of sorted names
+		my @sorted_names = ();
+		if ( $numeric ) {
+			@sorted_names = sort { $unsorted{$b} <=> $unsorted{$a} } keys %unsorted;
+		}
+		else {
+			@sorted_names = sort { $unsorted{$b} cmp $unsorted{$a} } keys %unsorted;
+		}
+
+		# reverse the array if it should be in decreasing order		
+		if ( ! _to_bool($decending) ) {
+			@sorted_names = reverse @sorted_names;
+		}
+		
+		# updated the row_names_order_of attribute
 		my $i = 0;
-		my $j = 0;
-		foreach my $row ( @ordered_rows ) {
-			$j = 0;  # reset the col counter
-			foreach my $col ( @ordered_cols ) {
-				$tbl[$i][$j] = $self->get_value_at($row, $col);
-				$j++;
-			}
+		foreach my $name ( @sorted_names ) {
+			$row_names_order_of{ident $self}->{$name} = $i;
 			$i++;
 		}
 		
-		for ( my $i = 0; $i < scalar @ordered_rows; $i++ ) {
-			for ( my $j = 0; $j < scalar @ordered_cols; $j++ ) {
-				$tbl[$i][$j] = $self->get_value_at(@ordered_rows)
-			}
-		}
-		
-		$mat_of{ident $self} = \@tbl;
+		return (1);
 	}
 	
 	sub save {
@@ -552,13 +631,13 @@ my $logger = get_logger();
 		# 		ie the names index match the order in the 2d array
 		
 		# check if the file parameter is defined
-		_is_defined($file, "file");
+		_check_defined($file, "file");
 		
 		$sep = _set_sep($sep);
 		
 		open my $OUT, ">", $file or
 			MyX::Generic::File::CannotOpen->throw(
-				error => "Cannot open file ($file) for writing"
+				error => "Cannot open file ($file) for writing\n"
 			);
 		
 		print $OUT $self->to_str($sep);
@@ -617,6 +696,7 @@ my $logger = get_logger();
 			# save the name and index (which is the same as the current
 			# number of rows) to the row names attribute
 			$row_names_of{ident $self}->{$row_name} = $self->get_row_count();
+			$row_names_order_of{ident $self}->{$row_name} = $self->get_row_count();
 			
 			# increment the row count
 			$self->_set_row_count($self->get_row_count() + 1);
@@ -631,10 +711,11 @@ my $logger = get_logger();
 			# go through each column in the matrix making an array
 			# of the values passed in by row_vals_aref
 			my @arr = ();
-			foreach my $col ( @{$self->get_col_names()} ) {
+			my $by_index = 1; # TRUE
+			foreach my $col ( @{$self->get_col_names($by_index)} ) {
 				if ( ! defined $col_names_hash{$col} ) {
 					MyX::Table::Col::UndefName->throw(
-						error => "Undefined column name: $col",
+						error => "Undefined column name: $col\n",
 						name => $col
 					);
 				}
@@ -656,13 +737,13 @@ my $logger = get_logger();
 		my ($self, $row_name, $row_vals_aref, $col_names_aref) = @_;
 		
 		# make sure the parameter values are defined
-		_is_defined($row_name, "row_name");
-		_is_defined($row_vals_aref, "row_vals_aref");
+		_check_defined($row_name, "row_name");
+		_check_defined($row_vals_aref, "row_vals_aref");
 		
 		# make sure the name is not already in the table
 		if ( $self->has_row($row_name) ) {
 			MyX::Table::Row::NameInTable->throw(
-				error => "Name already defined in matrix: $row_name",
+				error => "Name already defined in matrix: $row_name\n",
 				name => $row_name
 			);
 		}
@@ -675,7 +756,7 @@ my $logger = get_logger();
 		if ( $self->get_col_count() == 0 and $self->get_row_count() == 0 ) {
 			# if the col_names are not defined throw a parameter undef error
 			my $msg = "col_names -- must be defined when add_row is the first row added to a matrix";
-			_is_defined($col_names_aref, $msg);
+			_check_defined($col_names_aref, $msg);
 			
 			$self->_set_col_count(scalar @{$row_vals_aref});
 			$self->_set_col_names($col_names_aref);
@@ -685,7 +766,7 @@ my $logger = get_logger();
 		# same as the number of columns in the matrix
 		if ( scalar @{$row_vals_aref} != $self->get_col_count() ) {
 			MyX::Table::BadDim->throw(
-				error => "Number of columns does not equal cols in matrix"
+				error => "Number of columns does not equal cols in matrix\n"
 			);
 		}
 		
@@ -696,7 +777,7 @@ my $logger = get_logger();
 			# make sure the number of names is the same as the col_count
 			if ( scalar @{$col_names_aref} != $self->get_col_count() ) {
 				MyX::Table::BadDim->throw(
-					error => "Number of column names does not equal cols in matrix"
+					error => "Number of column names does not equal cols in matrix\n"
 				);
 			}
 		}
@@ -724,6 +805,7 @@ my $logger = get_logger();
 			# save the name and index (which is the same as the current
 			# number of cols) to the col names attribute
 			$col_names_of{ident $self}->{$col_name} = $self->get_col_count();
+			$col_names_order_of{ident $self}->{$col_name} = $self->get_col_count();
 			
 			# increment the col count
 			$self->_set_col_count($self->get_col_count() + 1);
@@ -738,10 +820,11 @@ my $logger = get_logger();
 			# go through each row in the matrix making an array
 			# of the values passed in by col_vals_aref
 			my @arr = ();
-			foreach my $row ( @{$self->get_row_names()} ) {
+			my $by_index = 1;  # TRUE
+			foreach my $row ( @{$self->get_row_names($by_index)} ) {
 				if ( ! defined $row_names_hash{$row} ) {
 					MyX::Table::Row::UndefName->throw(
-						error => "Undefined row name: $row",
+						error => "Undefined row name: $row\n",
 						name => $row
 					);
 				}
@@ -763,13 +846,13 @@ my $logger = get_logger();
 		my ($self, $col_name, $col_vals_aref, $row_names_aref) = @_;
 		
 		# make sure the parameter values are defined
-		_is_defined($col_name, "col_name");
-		_is_defined($col_vals_aref, "col_vals_aref");
+		_check_defined($col_name, "col_name");
+		_check_defined($col_vals_aref, "col_vals_aref");
 		
 		# make sure the name is not already in the table
 		if ( $self->has_col($col_name) ) {
 			MyX::Table::Col::NameInTable->throw(
-				error => "Name already defined in matrix: $col_name",
+				error => "Name already defined in matrix: $col_name\n",
 				name => $col_name
 			);
 		}
@@ -782,7 +865,7 @@ my $logger = get_logger();
 		if ( $self->get_col_count() == 0 and $self->get_row_count() == 0 ) {
 			# if the col_names are not defined thow a parameter undef error
 			my $msg = "row_names -- must be defined when add_row is the first column added to a matrix";
-			_is_defined($row_names_aref, $msg);
+			_check_defined($row_names_aref, $msg);
 			
 			$self->_set_row_count(scalar @{$col_vals_aref});
 			$self->_set_row_names($row_names_aref);
@@ -792,7 +875,7 @@ my $logger = get_logger();
 		# same as the number of columns in the matrix
 		if ( scalar @{$col_vals_aref} != $self->get_row_count() ) {
 			MyX::Table::BadDim->throw(
-				error => "Number of rows does not equal columns in matrix"
+				error => "Number of rows does not equal columns in matrix\n"
 			);
 		}
 		
@@ -803,7 +886,7 @@ my $logger = get_logger();
 			# make sure the number of names is the same as the col_count
 			if ( scalar @{$row_names_aref} != $self->get_row_count() ) {
 				MyX::Table::BadDim->throw(
-					error => "Number of row names does not equal columns in matrix"
+					error => "Number of row names does not equal columns in matrix\n"
 				);
 			}
 		}
@@ -827,9 +910,12 @@ my $logger = get_logger();
 		# adjust the indicies in the row_names_of attribute
 		my $row_names_of_href = $row_names_of{ident $self};
 		_decrement_name_indicies($row_names_of_href, $row_i);
+		my $row_names_order_of_href = $row_names_order_of{ident $self};
+		_decrement_name_indicies($row_names_order_of_href, $row_i);
 		
 		# remove the key fromt he row_nams_of href
 		delete $row_names_of_href->{$row_name};
+		delete $row_names_order_of_href->{$row_name};
 		
 		# if there are no more rows then reset the table
 		if ( $self->is_empty() ) {
@@ -843,12 +929,12 @@ my $logger = get_logger();
 		my ($self, $row_name) = @_;
 		
 		# make sure the parameter values are defined
-		_is_defined($row_name, "row_name");
+		_check_defined($row_name, "row_name");
 		
 		# ensure the row is actually in the table
 		if ( ! $self->has_row($row_name) ) {
 			MyX::Table::Row::UndefName->throw(
-				error => "Row ($row_name) is not in Table",
+				error => "Row ($row_name) is not in Table\n",
 				name => $row_name
 			);
 		}
@@ -874,9 +960,12 @@ my $logger = get_logger();
 		# adjust the indicies in the col_names_of attribute
 		my $col_names_of_href = $col_names_of{ident $self};
 		_decrement_name_indicies($col_names_of_href, $col_i);
+		my $col_names_order_of_href = $col_names_order_of{ident $self};
+		_decrement_name_indicies($col_names_order_of_href, $col_i);
 		
 		# remove the key fromt he row_nams_of href
 		delete $col_names_of_href->{$col_name};
+		delete $col_names_order_of_href->{$col_name};
 		
 		# if there are no more cols then reset the table
 		if ( $self->is_empty() ) {
@@ -890,12 +979,12 @@ my $logger = get_logger();
 		my ($self, $col_name) = @_;
 		
 		# make sure the parameter values are defined
-		_is_defined($col_name, "col_name");
+		_check_defined($col_name, "col_name");
 		
 		# ensure the row is actually in the table
 		if ( ! $self->has_col($col_name) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "Col ($col_name) is not in Table",
+				error => "Col ($col_name) is not in Table\n",
 				name => $col_name
 			);
 		}
@@ -1026,11 +1115,11 @@ my $logger = get_logger();
 		my ($params_href) = @_;
 		
 		# check the second table 
-		_is_defined($params_href->{y_tbl}, "y_tbl");
+		_check_defined($params_href->{y_tbl}, "y_tbl");
 		
 		if ( ref $params_href->{y_tbl} ne "Table" ) {
 			MyX::Generic::Ref::UnsupportedType->throw(
-				error => "y_tbl must be of type Table"
+				error => "y_tbl must be of type Table\n"
 			);
 		}
 		
@@ -1067,8 +1156,9 @@ my $logger = get_logger();
 		
 		# for each column in the old table add that column as a row in the
 		# new table
-		foreach my $c ( @{$orig->get_col_names()} ) {
-			$self->add_row($c, $orig->get_col($c), $orig->get_row_names());
+		my $by_index = 1; # TRUE
+		foreach my $c ( @{$orig->get_col_names($by_index)} ) {
+			$self->add_row($c, $orig->get_col($c), $orig->get_row_names($by_index));
 		}
 		
 		# delete the temporary original object
@@ -1084,6 +1174,8 @@ my $logger = get_logger();
 		$self->_set_col_count(0);
 		$row_names_of{ident $self} = undef;
 		$col_names_of{ident $self} = undef;
+		$row_names_order_of{ident $self} = undef;
+		$col_names_order_of{ident $self} = undef;
 		$row_names_header_of{ident $self} = undef;
 		$mat_of{ident $self} = undef;
 		
@@ -1092,15 +1184,16 @@ my $logger = get_logger();
 	
 	sub copy {
 		my ($self) = @_;
-		
 		my $copy = Table->new();
 		
 		# copy the row names header
 		$copy->_set_row_names_header($self->get_row_names_header());
+
 		
 		# copy each row of data from self to copy
+		my $row_i = 0;
 		foreach my $r ( @{$self->get_row_names()} ) {
-			my $row = $self->get_row($r);
+			$row_i++;
 			$copy->add_row($r, $self->get_row($r), $self->get_col_names());
 		}
 		
@@ -1110,7 +1203,7 @@ my $logger = get_logger();
 	sub has_row {
 		my ($self, $row) = @_;
 		
-		_is_defined($row);
+		_check_defined($row);
 		
 		if ( defined $row_names_of{ident $self}->{$row} ) {
 			return 1;  # TRUE
@@ -1123,7 +1216,7 @@ my $logger = get_logger();
 	sub has_col {
 		my ($self, $col) = @_;
 		
-		_is_defined($col);
+		_check_defined($col);
 		
 		if ( defined $col_names_of{ident $self}->{$col} ) {
 			return 1;  # TRUE
@@ -1178,7 +1271,7 @@ my $logger = get_logger();
 			# in this case there must be an error.  the number of headers in no
 			# way matches the number of values in row one
 			MyX::Table::BadDim->throw(
-				error => "Headers count doesn't match row 1 values count"
+				error => "Headers count doesn't match row 1 values count\n"
 			);
 		}
 		
@@ -1205,19 +1298,19 @@ my $logger = get_logger();
 		my ($file) = @_;
 		
 		# check if the file parameter is defined
-		_is_defined($file, "file");
+		_check_defined($file, "file");
 		
 		# check if the file exists
 		if ( ! -f $file ) {
 			MyX::Generic::DoesNotExist::File->throw(
-				error => "File ($file) does not exist"
+				error => "File ($file) does not exist\n"
 			)
 		}
 		
 		# check that the file is non empty
 		if ( ! -s $file ) {
 			MyX::Generic::File::Empty->throw(
-				error => "File ($file) is empty"
+				error => "File ($file) is empty\n"
 			);
 		}
 		
@@ -1238,13 +1331,13 @@ my $logger = get_logger();
 		my ($self, $row) = @_;
 		
 		# check if the row parameter is defined
-		_is_defined($row, "row");
+		_check_defined($row, "row");
 		
 		# check if the row exists in the table
 		my $row_href = $row_names_of{ident $self};
 		if ( ! defined $row_href->{$row} ) {
 			MyX::Table::Row::UndefName->throw(
-				error => "Undefined row name: $row",
+				error => "Undefined row name: $row\n",
 				name => $row
 			);
 		}
@@ -1256,13 +1349,13 @@ my $logger = get_logger();
 		my ($self, $col) = @_;
 		
 		# check if the col parameter is defined
-		_is_defined($col, "col");
+		_check_defined($col, "col");
 		
 		# check if the col exists in the table
 		my $col_href = $col_names_of{ident $self};
 		if ( ! defined $col_href->{$col} ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "Undefined col name: $col",
+				error => "Undefined col name: $col\n",
 				name => $col
 			);
 		}
@@ -1270,13 +1363,23 @@ my $logger = get_logger();
 		return 1;
 	}
 	
-	sub _is_defined {
+	sub _check_defined {
 		my ($val, $val_name) = @_;
 		
 		if ( ! defined $val ) {
 			MyX::Generic::Undef::Param->throw(
-				error => "Undefined parameter value ($val_name)"
+				error => "Undefined parameter value ($val_name)\n"
 			);
+		}
+		
+		return 1;
+	}
+	
+	sub _is_defined {
+		my ($val) = @_;
+		
+		if ( ! defined $val ) {
+			return 0;
 		}
 		
 		return 1;
@@ -1287,7 +1390,7 @@ my $logger = get_logger();
 		
 		if ( ref($aref) ne "ARRAY" ) {
 			MyX::Generic::Ref::UnsupportedType->throw(
-				error => "$name must be an array reference"
+				error => "$name must be an array reference\n"
 			);
 		}
 		
@@ -1480,6 +1583,7 @@ None reported.
 	# Others #
 	sub load_from_file;
 	sub load_from_href_href;
+	sub order;
 	sub save;
 	sub to_str;
 	sub add_row;
@@ -1505,7 +1609,7 @@ None reported.
 	sub _set_sep;
 	sub _check_row_name;
 	sub _check_col_name;
-	sub _is_defined;
+	sub _check_defined;
 
 =back
 
@@ -1549,23 +1653,35 @@ None reported.
 =head2 get_row_names
 
 	Title: get_row_names
-	Usage: $obj->get_row_names()
+	Usage: $obj->get_row_names($by_index)
 	Function: Returns the row names in the order of their index
 	Returns: aref
-	Args: NA
+	Args: -by_index => an optional booling indicating to get the row names
+	                   ordered by their index in the actual table and NOT their
+					   defined sorted order
 	Throws: NA
-	Comments: NA
+	Comments: Technically the rows can also be ordered by a column, but the
+			  order subroutine does not currently include that functionality.
+			  So calling get_row_names with $by_index = 1 (ie TRUE) will
+			  always give you the same order.  Of course this will change when
+			  I implement the ability to order by a given row in the order
+			  subroutine.
 	See Also: NA
 	
 =head2 get_col_names
 
 	Title: get_col_names
-	Usage: $obj->get_col_names()
+	Usage: $obj->get_col_names($by_index)
 	Function: Returns the column names in the order of their index
 	Returns: aref
-	Args: NA
+	Args: -by_index => an optional booling indicating to get the column names
+	                   ordered by their index in the actual table and NOT their
+					   defined sorted order
 	Throws: NA
-	Comments: NA
+	Comments: The table is stored as a 2-d array.  The column names can be
+		      ordered by how they fall in the 2-d array table or how they are
+			  sorted.  With a Table that has not invoked the order subroutine
+			  these two name orders will be the same.
 	See Also: NA
 	
 =head2 get_value_at
@@ -1802,16 +1918,25 @@ None reported.
 			  column) may have a name, but it is not required.
 	See Also: NA
 	
-=head2 _order
+=head2 order
 
-	Title: _order
-	Usage: $obj->_order()
-	Function: WARNING - unfinished and untested!  Orders the table by the
-	          indicies in the row and col names hashes.
+	Title: order
+	Usage: $obj->order($col_name, $numeric, $decreasing)
+	Function: Orders the table based on a single column
 	Returns: 1 on success
-	Args: NA
-	Throws: NA
-	Comments: This function is unfinished and untested.  Do NOT use it!
+	Args: -col_name => name of column by which to order
+		  -numeric => bool indicating to do a numeric sort
+		  -decreasing => bool indicating to do a decreasing sort
+	Throws: MyX::Table::Col::UndefName
+	        MyX::Generic::Undef::Param
+	Comments: To Do:
+				- Pass the parameters using a hash.  Currently if you want to
+				  set decreasing you also MUST set numeric.
+				- add ability to sort by a given row
+				
+			  Currently a Table can only be sorted by a given column.  It cannot
+			  be sorted by a given row.  Update the comments in the
+			  get_col_names and get_row_names subroutines if this changes.
 	See Also: NA
 	
 =head2 save
@@ -2255,10 +2380,10 @@ None reported.
 	          user outside of Table.pm.
 	See Also: NA
 	
-=head2 _is_defined
+=head2 _check_defined
 
-	Title: _is_defined
-	Usage: _is_defined($val $val_name)
+	Title: _check_defined
+	Usage: _check_defined($val $val_name)
 	Function: Checks if a value is defined
 	Returns: 1 on success
 	Args: -val => a value

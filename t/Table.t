@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 206;
+use Test::More tests => 222;
 use Test::Exception;
 use MyX::Table;
 
@@ -122,6 +122,7 @@ lives_ok( sub { $table = Table->new() },
     # the test section _set_col_names
     
     is_deeply( $table->get_col_names(), ["a", "b"], "get_col_names" );
+    is_deeply( $table->get_col_names(1), ["a", "b"], "get_col_names(by index)" );
 }
 
 # test _set_row_names
@@ -147,6 +148,7 @@ lives_ok( sub { $table = Table->new() },
     # the test section _set_row_names
     
     is_deeply( $table->get_row_names(), ["a", "b"], "get_row_names" );
+    is_deeply( $table->get_row_names(1), ["a", "b"], "get_row_names(by index" );
 }
 
 # test _set_sep
@@ -243,12 +245,59 @@ B,3,4
     is( $table2->to_str(","), $str, "table2 to_str()" );
 }
 
-# test _order
+# test order
 {
-    # IMPORTANT!!! -- the _order function is not finished or tested!
-    my $tbl;
-    my $href = {"A" => {"a" => 1, "b" => 2}, "B" => {"a" => 3, "b" => 4}};
-    ;
+    # NOTE: the order of these tests is important.  Some of the tests use the
+    #       table that was opperated on in the previous test so it assumes the output
+    #       as the table is after the previous test
+    
+    # remember the upper case are rows and lower case are columns
+    my $href = {"A" => {"a" => 1, "b" => 4}, "B" => {"a" => 3, "b" => 2}};
+    my $t1 = Table->new();
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    #print $t1->to_str() . "\n";
+    
+    throws_ok( sub{ $t1->order() },
+              'MyX::Generic::Undef::Param', "order()" );
+    throws_ok( sub{ $t1->order("blah") },
+              'MyX::Table::Col::UndefName', "order(blah)" );
+    
+    lives_ok( sub{ $t1->order("a") },
+             "expected to live -- order(a)" );
+    is_deeply( $t1->get_row_names(), ["A", "B"],
+              "get_row_names() after order(a)" );
+    
+    lives_ok( sub{ $t1->order("b") },
+             "expected to live -- order(b)" );
+    is_deeply( $t1->get_row_names(), ["B", "A"],
+              "get_row_names() after order(b)" );
+    
+    my $numeric = 1;
+    my $decreasing = 1;
+    lives_ok( sub{ $t1->order("b", $numeric, $decreasing) },
+             "expected to live -- order(b)" );
+    is_deeply( $t1->get_row_names(), ["A", "B"],
+              "get_row_names() after order(b, numeric decreasing)" );
+    
+    
+    # create an alphabetic table to test ordering
+    $href = {"A" => {"a" => "a", "b" => "d"}, "B" => {"a" => "c", "b" => "b"}};
+    $t1 = Table->new();
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    
+    $numeric = 0;
+    $decreasing = 0;
+    lives_ok( sub{ $t1->order("a", $numeric, $decreasing) },
+             "expected to live -- order(a)" );
+    is_deeply( $t1->get_row_names(), ["A", "B"],
+              "get_row_names() after order(a, ascii increasing)" );
+    
+    $decreasing = 1;
+    lives_ok( sub{ $t1->order("b", $numeric, $decreasing) },
+             "expected to live -- order(b)" );
+    is_deeply( $t1->get_row_names(), ["A", "B"],
+              "get_row_names() after order(b, ascii decreasing)" );
+    
 }
 
 # test _check_row_name
@@ -668,6 +717,9 @@ D,NA,NA,12,13
     my @empty = ();
     is_deeply( $t1->get_row_names(), \@empty, "reset() -- row names" );
     is_deeply( $t1->get_col_names(), \@empty, "reset() -- col names" );
+    
+    is_deeply( $t1->get_row_names(1), \@empty, "reset() -- row names by index order" );
+    is_deeply( $t1->get_col_names(1), \@empty, "reset() -- col names by index order" );
     
     is( $t1->get_row_count(), 0, "reset() -- row count" );
     is( $t1->get_col_count(), 0, "reset() -- col count" );
