@@ -184,7 +184,7 @@ This document describes Table::Iter version 0.0.1
 This module is an object for iterating over the values in a table.  To iterate
 over a table object use code that looks something like this:
 
-my $tbl_iter = Table::Iter->new($tbl);
+my $tbl_iter = Table::Iter->new({table => $tbl});
 
 while ( $tbl_iter->has_next_value() ) {
 	my $val = $tbl_iter->get_next_val();
@@ -301,10 +301,10 @@ None reported.
 			  over the table your code should look something like this:
 			  
 				while ( $tbl_iter->has_next_value() ) {
-					my $val = $tbl_iter->get_next_val();
+					my $val = $tbl_iter->get_next_value();
 				}
 				
-			  do NOT put the get_next_val in the while loop.  Zero values will
+			  do NOT put the get_next_value in the while loop.  Zero values will
 			  cause your iteration to terminate prematurely is you do that
 			  because zero is also evaluated by perl as FALSE.
 			  
