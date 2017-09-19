@@ -62,6 +62,8 @@ my $logger = get_logger();
 	sub order; # to finish!
 	sub save;
 	sub to_str;
+	sub change_row_name;
+	sub change_col_name;
 	sub add_row;
 	sub _add_row_checks;
 	sub add_col;
@@ -1574,56 +1576,58 @@ None reported.
 	new
 	
 	# Getters #
-	sub get_row_count;
-	sub get_col_count;
-	sub get_row_names;
-	sub get_col_names;
-	sub get_value_at;
-	sub get_value_at_fast;
-	sub get_row;
-	sub get_col;
-	sub get_row_index;
-	sub get_col_index;
-	sub get_row_names_header;
+	get_row_count;
+	get_col_count;
+	get_row_names;
+	get_col_names;
+	get_value_at;
+	get_value_at_fast;
+	get_row;
+	get_col;
+	get_row_index;
+	get_col_index;
+	get_row_names_header;
 
 	# Setters #
-	sub set_value_at;
-	sub _set_row_count;
-	sub _set_col_count;
-	sub _set_row_names;
-	sub _set_col_names;
-	sub _set_row_names_header;
+	set_value_at;
+	_set_row_count;
+	_set_col_count;
+	_set_row_names;
+	_set_col_names;
+	_set_row_names_header;
 
 	# Others #
-	sub load_from_file;
-	sub load_from_href_href;
-	sub order;
-	sub save;
-	sub to_str;
-	sub add_row;
-	sub _add_row_checks;
-	sub add_col;
-	sub _add_col_checks;
-	sub drop_row;
-	sub _drop_row_checks;
-	sub drop_col;
-	sub _drop_col_checks;
-	sub _decrement_name_indicies;
-	sub merge;
-	sub transpose;
-	sub reset;
-	sub copy;
-	sub has_row;
-	sub has_col;
-	sub has_row_names_header;
-	sub is_empty;
-	sub _check_header_format;
-	sub _aref_to_href;
-	sub _check_file;
-	sub _set_sep;
-	sub _check_row_name;
-	sub _check_col_name;
-	sub _check_defined;
+	load_from_file;
+	load_from_href_href;
+	order;
+	save;
+	to_str;
+    change_row_name
+    change_col_name
+	add_row;
+	_add_row_checks;
+	add_col;
+	_add_col_checks;
+	drop_row;
+	_drop_row_checks;
+	drop_col;
+	_drop_col_checks;
+	_decrement_name_indicies;
+	merge;
+	transpose;
+	reset;
+	copy;
+	has_row;
+	has_col;
+	has_row_names_header;
+	is_empty;
+	_check_header_format;
+	_aref_to_href;
+	_check_file;
+	_set_sep;
+	_check_row_name;
+	_check_col_name;
+	_check_defined;
 
 =back
 
