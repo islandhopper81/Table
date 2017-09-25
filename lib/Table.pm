@@ -1971,6 +1971,8 @@ None reported.
 			  If the first column does not have header values that table can
 			  still be loaded.  When calling the function all the parameters
 			  become required included the "has_col_header" boolean parameter.
+			  The column headers we be set to integers from 0 to n-1 number of
+			  columns in the table.
 	See Also: NA
 	
 =head2 order
