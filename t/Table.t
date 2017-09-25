@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 222;
+use Test::More tests => 228;
 use Test::Exception;
 use MyX::Table;
 
@@ -157,6 +157,13 @@ lives_ok( sub { $table = Table->new() },
     is( Table::_set_sep(), "\t", "_set_sep()" );
 }
 
+# test _has_col_headers
+{
+    is( Table::_has_col_headers(), 1, "_has_col_headers()" );
+    is( Table::_has_col_headers(0), 0, "_has_col_headers(0)" );
+    is( Table::_has_col_headers("F"), 0, "_has_col_headers(F)" );
+}
+
 # test _is_aref
 {
     my $href = {"A" => 1, "B" => 2};
@@ -203,18 +210,31 @@ lives_ok( sub { $table = Table->new() },
     ($fh, $filename) = tempfile();
     _make_tbl_file2($fh);
      lives_ok( sub{ $table->load_from_file($filename, ",") },
-             "expected to live -- load_from_file()" );
+             "expected to live -- load_from_file() v2" );
     
     # check the names to make sure they were set correctly
     is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
-              "load_from_file -- look at row names" );
+              "load_from_file -- look at row names v2" );
     is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
-              "load_from_file -- look at col names" );
+              "load_from_file -- look at col names 2" );
     
     is( $table->get_row_names_header(), "RowNames",
        "load_from_file - row names header v2" );
     is( $table->has_row_names_header(), 1,
        "load_from_file -- has_row_names_header v2" );
+    
+    ###
+    # test using the third value format which has no col names
+    ($fh, $filename) = tempfile();
+    _make_tbl_file3($fh);
+     lives_ok( sub{ $table->load_from_file($filename, ",", "F") },
+             "expected to live -- load_from_file() v3" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names v3" );
+    is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at col names v3" );
     
     # reset to use the version 1 table
     ($fh, $filename) = tempfile();
@@ -890,6 +910,26 @@ sub _make_tbl_file2 {
     
     my $str = "RowNames,A,B,C,D,E
 M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file3 {
+        my ($fh) = @_;
+    
+    # In this format there are no headers given (ie no col names)
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "M,0,3,3,5,5
 N,2,0,3,5,5
 O,3,3,0,4,4
 P,5,5,4,0,2

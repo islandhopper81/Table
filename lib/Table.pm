@@ -86,6 +86,7 @@ my $logger = get_logger();
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
+	sub _has_col_headers;
 	sub _check_row_name;
 	sub _check_col_name;
 	sub _is_aref;
@@ -505,7 +506,7 @@ my $logger = get_logger();
 	}
 	
 	sub load_from_file {
-		my ($self, $file, $sep) = @_;
+		my ($self, $file, $sep, $has_col_headers) = @_;
 		
 		_check_file($file);
 		
@@ -522,11 +523,13 @@ my $logger = get_logger();
 		# this sets the column counts and names
 		# NOTE: his resets all the attributes that might have been stored
 		# in the $self object
-		chomp(my $headers = <$IN>);
-		my @col_names = split(/$sep/, $headers);
-		$self->_set_col_count(scalar @col_names);
-		$self->_set_col_names(\@col_names);
-		$self->_set_row_names_header(undef);
+		if ( _has_col_headers($has_col_headers) ) {
+			chomp(my $headers = <$IN>);
+			my @col_names = split(/$sep/, $headers);
+			$self->_set_col_count(scalar @col_names);
+			$self->_set_col_names(\@col_names);
+			$self->_set_row_names_header(undef);
+		}
 		
 		# read in the rows
 		# take of the row names as the rows are input
@@ -542,7 +545,23 @@ my $logger = get_logger();
 			
 			# use the first line to check the header format
 			if ( $is_first_line == 1 ) {
-				$self->_check_header_format(scalar @vals);
+				if ( _has_col_headers($has_col_headers) ) {
+					$self->_check_header_format(scalar @vals);
+				}
+				else {
+					# this is the case where the user has specified that
+					# there is no header line.  Therefore I want to assign
+					# the default headers
+					my $len = scalar @vals;
+					$len--; # don't count the row names
+					$self->_set_col_count($len);
+					
+					$len--; # convert to index
+					my @col_names = (0..$len);
+					$self->_set_col_names(\@col_names);
+					$self->_set_row_names_header(undef);
+				}
+
 				$is_first_line = 0;
 			}
 		
@@ -1329,6 +1348,16 @@ my $logger = get_logger();
 		return($sep);
 	}
 	
+	sub _has_col_headers {
+		my ($bool) = @_;
+		
+		if ( _is_defined($bool) ) {
+			return _to_bool($bool);
+		}
+		
+		return 1;  # the defaul is that is has header (ie true)
+	}
+	
 	sub _check_row_name {
 		my ($self, $row) = @_;
 		
@@ -1506,11 +1535,13 @@ there cannot be two columns with the name "A".  There can be one column named
 There are two recommend ways to populate a table object:
 
 1) load_from_file -- this function parses through a plain text file to populate
-the table object.  The first row should be the column headers.  The row names
-can have a header value.  Each row after the header line should have a name as
-the first value.  The sep option can be used to specify a delimiter for your
-file (ie "\t", ",", etc).  This is the recommended and most simple way to
-populate a table object.
+the table object.  The first row should be the column headers.  If there are no
+column headers the table can still be loaded by setting the optional parameters,
+especially the has_col_headers parameter (see load_from_file() documentation).
+The row names can have a header value.  Each row after the header line should
+have a name as the first value.  The sep option can be used to specify a
+delimiter for your file (ie "\t", ",", etc).  This is the recommended and most
+simple way to populate a table object.
 
 2) load_from_href_href -- in Perl a table with column and row names can be
 stored as hash reference of hash references.  If your data is in this format
@@ -1576,58 +1607,59 @@ None reported.
 	new
 	
 	# Getters #
-	get_row_count;
-	get_col_count;
-	get_row_names;
-	get_col_names;
-	get_value_at;
-	get_value_at_fast;
-	get_row;
-	get_col;
-	get_row_index;
-	get_col_index;
-	get_row_names_header;
+	get_row_count
+	get_col_count
+	get_row_names
+	get_col_names
+	get_value_at
+	get_value_at_fast
+	get_row
+	get_col
+	get_row_index
+	get_col_index
+	get_row_names_header
 
 	# Setters #
-	set_value_at;
-	_set_row_count;
-	_set_col_count;
-	_set_row_names;
-	_set_col_names;
-	_set_row_names_header;
+	set_value_at
+	_set_row_count
+	_set_col_count
+	_set_row_names
+	_set_col_names
+	_set_row_names_header
 
 	# Others #
 	load_from_file;
-	load_from_href_href;
-	order;
-	save;
-	to_str;
+	load_from_href_href
+	order
+	save
+	to_str
     change_row_name
     change_col_name
-	add_row;
-	_add_row_checks;
-	add_col;
-	_add_col_checks;
-	drop_row;
-	_drop_row_checks;
-	drop_col;
-	_drop_col_checks;
-	_decrement_name_indicies;
-	merge;
-	transpose;
-	reset;
-	copy;
-	has_row;
-	has_col;
-	has_row_names_header;
-	is_empty;
-	_check_header_format;
-	_aref_to_href;
-	_check_file;
-	_set_sep;
-	_check_row_name;
-	_check_col_name;
-	_check_defined;
+	add_row
+	_add_row_checks
+	add_col
+	_add_col_checks
+	drop_row
+	_drop_row_checks
+	drop_col
+	_drop_col_checks
+	_decrement_name_indicies
+	merge
+	transpose
+	reset
+	copy
+	has_row
+	has_col
+	has_row_names_header
+	is_empty
+	_check_header_format
+	_aref_to_href
+	_check_file
+	_set_sep
+	_has_col_headers
+	_check_row_name
+	_check_col_name
+	_check_defined
 
 =back
 
@@ -1920,11 +1952,12 @@ None reported.
 =head2 load_from_file
 
 	Title: load_from_file
-	Usage: $obj->load_from_file($file, $sep)
+	Usage: $obj->load_from_file($file, $sep, $has_col_headers)
 	Function: Loads the data from a delimited file
 	Returns: 1 on success
 	Args: -file => path to file
 	      -sep => delimiter string
+		  -has_col_header => boolen
 	Throws: MyX::Generic::File::CannotOpen
 	        MyX::Table::BadDim
 	        MyX::Table::NamesNotUniq
@@ -1934,6 +1967,10 @@ None reported.
 	          It assumes the first line is the column names and the first
 			  column is the row names.  The row names column (ie the first
 			  column) may have a name, but it is not required.
+			  
+			  If the first column does not have header values that table can
+			  still be loaded.  When calling the function all the parameters
+			  become required included the "has_col_header" boolean parameter.
 	See Also: NA
 	
 =head2 order
@@ -2372,6 +2409,19 @@ None reported.
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  If the sep parameter is not defined
 			  the defualt is returned.  Currently the default is set to "\t".
+	See Also: NA
+	
+=head2 _has_col_headers
+
+	Title: _has_col_headers
+	Usage: _has_col_headers($bool)
+	Function: Checks has_col_headers boolean
+	Returns: bool
+	Args: -bool => boolean value (0 | 1 | T | F | true | false)
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  If the bool argument is not defined
+			  the defualt is returned.  Currently the default is set to "T".
 	See Also: NA
 	
 =head2 _check_row_name
