@@ -8,6 +8,12 @@ my $builder = Module::Build->new(
     dist_author         => 'Scott Yourstone <scott.yourstone.com>',
     dist_version_from   => 'lib/Table.pm',
     requires => {
+		'Class::Std::Utils' => 0,
+		'Array::Utils' => 0,
+		'Scalar::Util' => 0,
+		'List::MoreUtils' => 0,
+		'Log::Log4perl' => 0,
+		'Log::Log4perl::CommandLine' => 0,
         'Test::More' => 0,
         'version'    => 0,
     },
