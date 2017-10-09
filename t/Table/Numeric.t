@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 43;
 use Test::Exception;
 use MyX::Table;
 
@@ -115,6 +115,51 @@ lives_ok( sub { $table = Table::Numeric->new() },
     
     is_deeply( $new_tbl->get_row("g3"), \@g3_agg, "check agg tbl row g3" );
     is_deeply( $new_tbl->get_row("g4"), \@g4_agg, "check agg tbl row g4" );
+}
+
+# test increment_at
+{
+	throws_ok( sub{ $table->increment_at() },
+				'MyX::Generic::Undef::Param', "increment_at() - caught" );
+	throws_ok( sub{ $table->increment_at("blah") },
+				'MyX::Table::Row::UndefName', "increment_at(blah) - caught" );
+	throws_ok( sub{ $table->increment_at("M") },
+				'MyX::Generic::Undef::Param', "increment_at(M) - caught" );
+
+	my $orig_val = $table->get_value_at("M", "A");
+	lives_ok( sub{ $table->increment_at("M","A") },
+				"expected to live -- increment_at(M,A)" );
+	is(	$table->get_value_at("M","A"), $orig_val+1, "check increment_at(M,A)" );
+	
+	lives_ok( sub{ $table->increment_at("M","A", 2) },
+				"expected to live -- increment_at(M,A,2)" );
+	is(	$table->get_value_at("M","A"), $orig_val+3, "check increment_at(M,A,2)" );
+
+	# reset the table value
+	$table->set_value_at("M", "A", $orig_val);
+
+}
+
+# test decrement_at
+{
+	throws_ok( sub{ $table->decrement_at() },
+				'MyX::Generic::Undef::Param', "decrement_at() - caught" );
+	throws_ok( sub{ $table->decrement_at("blah") },
+				'MyX::Table::Row::UndefName', "decrement_at(blah) - caught" );
+	throws_ok( sub{ $table->decrement_at("M") },
+				'MyX::Generic::Undef::Param', "decrement_at(M) - caught" );
+
+	my $orig_val = $table->get_value_at("M", "A");
+	lives_ok( sub{ $table->decrement_at("M","A") },
+				"expected to live -- decrement_at(M,A)" );
+	is(	$table->get_value_at("M","A"), $orig_val-1, "check decrement_at(M,A)" );
+	
+	lives_ok( sub{ $table->decrement_at("M","A", -2) },
+				"expected to live -- decrement_at(M,A,-2)" );
+	is(	$table->get_value_at("M","A"), $orig_val-3, "check decrement_at(M,A,-2)" );
+
+	# reset the table value
+	$table->set_value_at("M", "A", $orig_val);
 }
 
 

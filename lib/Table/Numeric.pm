@@ -38,6 +38,8 @@ my $logger = get_logger();
 
 	# Others #
 	sub aggregate;
+	sub increment_at;
+	sub decrement_at;
 	
 	
 
@@ -159,6 +161,27 @@ my $logger = get_logger();
 		
 		return($new_tbl);
 	}
+
+	sub increment_at {
+		my ($self, $row, $col, $val) = @_;
+
+		if ( ! defined $val ) { $val = 1; }
+
+		my $new_val = $self->get_value_at($row, $col) + $val;
+		$self->set_value_at($row, $col, $new_val);
+
+		return 1;
+	}
+
+	sub decrement_at {
+		my ($self, $row, $col, $val) = @_;
+
+		if ( ! defined $val ) { $val = -1; }
+
+		$self->increment_at($row, $col, $val);
+
+		return 1;
+	}
 	
 }
 
@@ -240,6 +263,8 @@ None reported.
 
 	# Others #
 	aggregate
+	increment_at
+	decrement_at
 
 =back
 
@@ -291,6 +316,32 @@ None reported.
 	Comments: This function aggregates ONLY by rows.  If you want to aggregate
 			  by columns you will have to transpose the matrix first and then
 			  you can aggregate by rows.  
+	See Also: NA
+
+=head2 increment_at
+
+	Title: increment_at
+	Usage: $obj->increment_at($row, $col, $val);
+	Function: Increments the value at $row,$col by $val
+	Returns: 1 on success
+	Args: -row => row name
+          -col => column name
+          [-val] => value by which to increment
+	Throws: MyX::Generic::Undef::Param
+	Comments: If no $val is provided 1 is used
+	See Also: NA
+
+=head2 decrement_at
+
+	Title: decrement_at
+	Usage: $obj->decrement_at($row, $col, $val);
+	Function: Decrements the value at $row,$col by $val
+	Returns: 1 on success
+	Args: -row => row name
+          -col => column name
+          [-val] => value by which to decrement
+	Throws: MyX::Generic::Undef::Param
+	Comments: If no $val is provided -1 is used
 	See Also: NA
 
 =head1 BUGS AND LIMITATIONS
