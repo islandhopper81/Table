@@ -1,9 +1,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 228;
+use Test::More tests => 276;
 use Test::Exception;
 use MyX::Table;
+use UtilSY qw(:all);
 
 # others to include
 use File::Temp qw/ tempfile tempdir /;
@@ -577,6 +578,158 @@ Q,5,5,4,2,0,5,1
              "expected to live -- reset the table" );
 }
 
+# test _check_subset_params
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    my $in_params;  # this gets set and reset multiple times below
+    
+    # the case with no parameters will naturally do nothing to the table
+    my $obs_params;
+    lives_ok( sub{ $obs_params = $t->_check_subset_params() },
+             "expected to live -- _check_subset_params()" );
+    # In the following test I want to see if all the rows/cols are present in
+    # the starting table and subseted table
+    is_deeply([sort keys %{$obs_params->{rows}}], [sort @{$t->get_row_names()}],
+              "_check_subset_params() -- all rows" );
+    is_deeply([sort keys %{$obs_params->{cols}}], [sort @{$t->get_col_names()}],
+              "_check_subset_params() -- all cols" );
+    is($obs_params->{drop}, 0, "_check_subset_params() -- drop" );
+    
+    # checks that errors are thrown when I provide the wrong type of parameters
+    $in_params->{rows} = "scalar string";
+    throws_ok( sub{ $t->_check_subset_params($in_params) },
+              'MyX::Generic::Ref::UnsupportedType', "caught - _check_subset_params(row scalar)" );
+    
+    undef %{$in_params};
+    $in_params->{cols} = "scalar string";
+    throws_ok( sub{ $t->_check_subset_params($in_params) },
+              'MyX::Generic::Ref::UnsupportedType', "caught - _check_subset_params(col scalar)" );
+    
+    # checks when arrays are passed instead of hashes
+    undef %{$in_params};
+    $in_params->{rows} = ["A", "B"];
+    lives_ok( sub{ $obs_params = $t->_check_subset_params($in_params) },
+                "expected to live -- _check_subset_params(with aref)" );
+    is( ref($obs_params->{rows}), "HASH", "rows should be a hash" );
+    
+    undef %{$in_params};
+    $in_params->{cols} = ["A", "B"];
+    lives_ok( sub{ $obs_params = $t->_check_subset_params($in_params) },
+                "expected to live -- _check_subset_params(with aref)" );
+    is( ref($obs_params->{cols}), "HASH", "cols should be a hash" );
+    
+    # test the drop parameter
+    undef %{$in_params};
+    $in_params->{drop} = "abc";  # wrong type -- not a boolean
+    throws_ok( sub{ $t->_check_subset_params($in_params) },
+              'MyX::Generic::BadValue', "caught - _check_subset_params(drop scalar)" );
+
+    $in_params->{drop} = "T";
+    lives_ok( sub{ $obs_params = $t->_check_subset_params($in_params) },
+                "expected to live -- _check_subset_params(drop)" );
+    is( $obs_params->{drop}, 1, "drop should be 1 ie true" );
+    is_deeply( href_to_aref($obs_params->{rows}), [],
+              "_check_subset_params(drop) -- keep all rows" );
+    is_deeply( href_to_aref($obs_params->{cols}), [],
+              "_check_subset_params(drop) -- keep all cols" );
+    
+    # test what happens when I mistakenly use row or col as the parameter
+    lives_ok( sub{ $obs_params = $t->_check_subset_params({col=>["A"]}) },
+                "expected to live -- _check_subset_params(col) - instead of cols" );
+    is_deeply( href_to_aref($obs_params->{cols}), ["A"],
+              "_check_subset_params(col) -- values after col" );
+    lives_ok( sub{ $obs_params = $t->_check_subset_params({row=>["a"]}) },
+                "expected to live -- _check_subset_params(row) - instead of rows" );
+    is_deeply( href_to_aref($obs_params->{rows}), ["a"],
+              "_check_subset_params(row) -- values after row" );
+}
+
+# test subset
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>2, c=>3}, B => {a=>3, b=>4, c=>5}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    # subset a row
+    lives_ok( sub{ $t->subset( {rows => ["A"]} ) },
+                "expected to live -- subset(row - A)" );
+    is_deeply( $t->get_row_names(), ["A"], "subset(rows - A)" );
+    
+    # reset the table and test the drop functionality for rows
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    lives_ok( sub{ $t->subset( {rows => ["A"], drop => "T"} ) },
+                "expected to live -- subset(row - A, drop)" );
+    is( $t->get_row_count(), 1, "subset(rows - A, drop) - row count" );
+    is_deeply( $t->get_row_names(), ["B"], "subset(rows - A, drop)" );
+    
+    # reset the table and subset a column
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    lives_ok( sub{ $t->subset( {cols => ["a"]} ) },
+                "expected to live -- subset(col - a)" );
+    is_deeply( $t->get_col_names(), ["a"], "subset(cols - a)" );
+    is_deeply( $t->get_row_names(), ["A", "B"], "subset(cols - a) check rows" );
+    
+    # reset the table and test the drop functionality for cols
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    lives_ok( sub{ $t->subset( {cols => ["a"], drop => "T"} ) },
+                "expected to live -- subset(col - a, drop)" );
+    is( $t->get_col_count(), 2, "subset(col - a, drop) - col count" );
+    is_deeply( $t->get_col_names(), ["b","c"], "subset(col - a, drop)" );
+    
+    # reset the table and test the drop functionality for rows and cols
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    my $exp_href = {B => {b=>4}};
+    my $exp_t = Table->new();
+    $exp_t->load_from_href_href($exp_href, ["B"], ["b"]);
+    lives_ok( sub{ $t->subset( {rows => ["B"], cols => ["b"]} ) },
+                "expected to live -- subset([B], [b])" );
+    is( $t->get_row_count(), 1, "subset([B], [b]) - row count" );
+    is( $t->get_col_count(), 1, "subset([B], [b]) - col count" );
+    is_deeply( $t->get_col_names(), $exp_t->get_col_names(),
+              "subset([B], [b]) - check table col names" );
+    is_deeply( $t->get_row_names(), $exp_t->get_row_names(),
+              "subset([B], [b]) - check table row names" );
+    is( $t->get_value_at("B", "b"), $exp_t->get_value_at("B", "b"),
+       "subset([B], [b]) - check values");
+    
+    # reset the table and test the drop functionality for rows and cols when
+    # drop is set to true    
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    $exp_href = {B => {b=>4}};
+    $exp_t->load_from_href_href($exp_href, ["B"], ["b"]);
+    lives_ok( sub{ $t->subset( {rows => ["A"], cols => ["a", "c"], drop => "T"} ) },
+                "expected to live -- subset([A], [a,c], T)" );
+    is( $t->get_row_count(), 1, "subset([A], [a,c], T) - row count" );
+    is( $t->get_col_count(), 1, "subset([A], [a,c], T) - col count" );
+    is_deeply( $t->get_col_names(), $exp_t->get_col_names(),
+              "subset([A], [a,c], T) - check table col names" );
+    is_deeply( $t->get_row_names(), $exp_t->get_row_names(),
+              "subset([A], [a,c], T) - check table row names" );
+    is( $t->get_value_at("B", "b"), $exp_t->get_value_at("B", "b"),
+       "subset([A], [a,c], T) - check values");
+    
+    # what happens when I try subsetting with a row that is not in the table
+    # the table gets emptied!
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    lives_ok( sub{ $t->subset( {rows => ["X"]} ) },
+                "expected to live -- subset([X])" );
+    is( $t->get_row_count(), 0, "subset([X]) - row count" );
+    is( $t->get_col_count(), 0, "subset([X]) - col count" );
+    
+    # what happens when I try subsetting with a col that is not in the table
+    # the table gets emptied!
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    lives_ok( sub{ $t->subset( {cols => ["y"]} ) },
+                "expected to live -- subset([y])" );
+    is( $t->get_row_count(), 0, "subset([y]) - row count" );
+    is( $t->get_col_count(), 0, "subset([y]) - col count" );
+}
+
 # test _check_merge_params
 {
     # create a test table
@@ -601,7 +754,6 @@ Q,5,5,4,2,0,5,1
     lives_ok( sub{ $out_params = Table::_check_merge_params($in_params) },
              "expected to live -- _check_merge_params(t1, all_y=T) ");
     is( $out_params->{all_y}, 1, "_check_merge_params() -- all_y=T");
-
 }
 
 # test merge

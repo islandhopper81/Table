@@ -16,6 +16,7 @@ use Log::Log4perl qw(:easy);
 use Log::Log4perl::CommandLine qw(:all);
 use MyX::Generic;
 use version; our $VERSION = qv('0.0.1');
+use UtilSY qw(aref_to_href href_to_aref check_ref to_bool);
 
 # set up the logging environment
 my $logger = get_logger();
@@ -73,6 +74,7 @@ my $logger = get_logger();
 	sub drop_col;
 	sub _drop_col_checks;
 	sub _decrement_name_indicies;
+	sub subset;
 	sub merge;
 	sub _check_merge_params;
 	sub transpose;
@@ -926,7 +928,7 @@ my $logger = get_logger();
 		splice @{$mat_of{ident $self}}, $row_i, 1;
 		
 		# subtract one from row count
-		$self->_set_row_count($self->get_row_count - 1);
+		$self->_set_row_count($self->get_row_count() - 1);
 		
 		# adjust the indicies in the row_names_of attribute
 		my $row_names_of_href = $row_names_of{ident $self};
@@ -1028,7 +1030,110 @@ my $logger = get_logger();
 		return 1;
 	}
 	
-	sub merge{
+	sub subset {
+		my ($self, $params_href) = @_;
+		# the params can include values such as:
+		# rows, cols, drop
+		
+		# check the parameter values and set defaults as necessary
+		$self->_check_subset_params($params_href);
+		
+		# some variables
+		my $rows_href = $params_href->{rows};
+		my $cols_href = $params_href->{cols};
+		my $drop = $params_href->{drop};
+		
+		# drop the rows first because they are easier and faster to drop
+		foreach my $r ( @{$self->get_row_names()} ) {
+			if ( $drop == 0 and ! defined $rows_href->{$r} ) {
+				$self->drop_row($r);
+			}
+			elsif ( $drop == 1 and defined $rows_href->{$r} ) {
+				$self->drop_row($r);
+			}
+		}
+		foreach my $c ( @{$self->get_col_names()} ) {
+			if ( $drop == 0 and ! defined $cols_href->{$c} ) {
+				$self->drop_col($c);
+			}
+			elsif ( $drop == 1 and defined $cols_href->{$c} ) {
+				$self->drop_col($c);
+			}
+		}
+
+		return(1);
+	}
+	
+	sub _check_subset_params {
+		my ($self, $params_href) = @_;
+		
+		# I frequently mistakenly use "col" or "row" as the parameter value
+		# and that problem is hard to debug, so I am going to through an error
+		# if I encounter this problem
+		if ( _is_defined($params_href->{col}) ) {
+			$params_href->{cols} = $params_href->{col};
+		}
+		if ( _is_defined($params_href->{row}) ) {
+			$params_href->{rows} = $params_href->{row};
+		}
+		
+		# NOTE: if drop is set to TRUE and rows (or cols) is not defined then
+		#		naturally all the rows would be removed.  That functionality
+		#		seemed counterintuitive to me.  So now when drop is set to
+		#		TRUE (indicating to remove the given rows or cols) then the
+		#		default will be to keep all the rows (or cols) if there is
+		# 		nothing explicetly designated to be removed.  For example,
+		#		subset({drop => "T"}) will leave the table unchaged as opposed
+		# 		to removing everything.
+		
+		# if drop is not set then keep all the given rows and cols
+		# this drop block must go before the checks for rows and cols
+		if ( _is_defined($params_href->{drop}) ) {
+			$params_href->{drop} = to_bool($params_href->{drop});
+			
+			# if either the rows or cols params is not set then set it to
+			# all the rows or cols.  see note above.
+			if ( $params_href->{drop} == 1 and
+				! _is_defined($params_href->{rows}) ) {
+				$params_href->{rows} = [];
+			}
+			if ( $params_href->{drop} == 1 and
+				(! _is_defined($params_href->{cols})) ) {
+				$params_href->{cols} = [];
+			}
+		}
+		else {
+			$params_href->{drop} = 0; # set to false as defualt
+		}
+		
+		# if rows is not set then keep all rows
+		if ( ! _is_defined($params_href->{rows}) ) {
+			$params_href->{rows} = aref_to_href($self->get_row_names());
+		}
+		
+		# check the row type
+		if ( ref($params_href->{rows}) eq "ARRAY" ) {
+			$params_href->{rows} = aref_to_href($params_href->{rows});
+		}
+		check_ref($params_href->{rows}, "HASH");
+		
+		# if cols is not set then keep all cols
+		if ( ! _is_defined($params_href->{cols}) ) {
+			$params_href->{cols} = aref_to_href($self->get_col_names());
+		}
+		
+		# check the col type
+		if ( ref($params_href->{cols}) eq "ARRAY" ) {
+			$params_href->{cols} = aref_to_href($params_href->{cols});
+		}
+		check_ref($params_href->{cols}, "HASH");
+		
+		# make sure the rows and cols specified are actually in the table??
+		
+		return($params_href);
+	}
+	
+	sub merge {
 		my ($self, $params_href) = @_;
 		
 		# NOTE: in this function I assume that the columns are in the
@@ -1513,7 +1618,21 @@ This document describes Table version 0.0.1
 		y_tbl => $tbl2,
 		all_x => "T",
 		all_y => "T"
-	})
+	});
+	
+	# subset a table
+	# note this permenently removes what is left out
+	$tbl1->subset({
+		rows => $rows_to_keep_aref,
+		cols => $cols_to_keep_aref,
+	});
+	
+	# you can also subset by dropping rows or cols
+	$tbl1->subset({
+		rows => $rows_to_drop_aref,
+		cols => $cols_to_drop_aref,
+		drop => "T"
+	});
 	
 	# order by column
 	my $numeric = 1; # TRUE
@@ -1644,7 +1763,10 @@ None reported.
 	drop_col
 	_drop_col_checks
 	_decrement_name_indicies
+	subset
+	_check_subset_params
 	merge
+	_check_merge_params
 	transpose
 	reset
 	copy
@@ -2210,6 +2332,59 @@ None reported.
 			  col) that was removed.
 	See Also: drop_row
 	          drop_col
+	
+=head2 subset
+
+	Title: subset
+	Usage: subset($params_href)
+	Function: Subsets the table
+	Returns: 1 on success
+	Args: -params_href => href of subset parameters (see Comments)
+	Throws: MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: The params_href can have the following features:
+	          params_href{rows => aref or href,
+			              cols => aref or href,
+						  drop => boolean}
+			  The rows and cols parameters can be an array reference or hash
+			  reference with row and column names.  If hash references are used
+			  the names must be the keys.  I would recommend using the array
+			  reference option for these.  If rows are passed that are not in
+			  the table they are quietly ignored.  So if you subset a table
+			  attempting to get a single row that is not in the table it
+			  essentially empties the table. If either the rows (or cols)
+			  parameter is not passed all the rows (or cols) are kept.
+			  
+			  drop is a boolean value indicating that the provided rows and cols
+			  should be dropped from the table instead of kept. If you set drop
+			  to "T" and don't provide a list of rows then all the rows will be
+			  kept.  Cols perform similarly.  So the only way to drop all the
+			  rows or cols would be to explicitly list them all in rows or cols.
+			  However, if you want to do that you can simply call the empty()
+			  function.
+			  
+			  Importantly, once you subset a table there is no way to reverse
+			  the operation.  So if you want to subset without losing the
+			  excluded rows and columns you should copy() the table before
+			  executing subset().
+	See Also: NA
+	
+=head2 _check_subset_params
+
+	Title: _check_subset_params
+	Usage: _check_subset_params($params_href)
+	Function: Checks the subset parameters for errors
+	Returns: Table
+	Args: -params_href => href of subset parameters (see Comments)
+	Throws: MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm. The params_href can have the
+			  following features:
+	          params_href{rows => aref or href,
+			              cols => aref or href,
+						  drop => boolean}
+	See Also: Table::subset
 	
 =head2 merge
 
