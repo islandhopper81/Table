@@ -355,31 +355,7 @@ L<http://rt.cpan.org>.
 
 =head1 TO DO
 
-=head2 check what happens with row_name_header when adding rows
-or columns and providing the third argument.
-
-=head2 check for columns without correct number
-
-When I read in the table there could be columns that are not square
-with the rest of columns.
-
-=head2 optimize reset function
-
-I think there is a more efficient way to implement the reset function
-that will explicenetly free up the memory.
-
-=head2 a melt function
-
-Similar to the melt function in R
-
-=head2 an iterater function
-
-Get each element in the table one at a time.  It might be useful to utilize the
-melt function here.
-
-=head2 make a table iterator object
-
-for iterating through each element in the table.
+None
 
 =head1 AUTHOR
 

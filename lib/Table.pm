@@ -2695,14 +2695,15 @@ that will explicenetly free up the memory.
 
 Similar to the melt function in R
 
-=head2 an iterater function
+=head2 Table::Big
 
-Get each element in the table one at a time.  It might be useful to utilize the
-melt function here.
+Make a Table object that can handle very large tables.  If I can 
+write this on top of C or C++ code to optimize memory and speed
+performance
 
-=head2 make a table iterator object
+=head2 Table::Sparse
 
-for iterating through each element in the table.
+Make a Table object that can handle sparse tables.
 
 =head1 AUTHOR
 
