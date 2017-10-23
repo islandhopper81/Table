@@ -1696,10 +1696,18 @@ This document describes Table version 0.0.1
 		drop => "T"
 	});
 	
-	# order by column
+	# sort by a column
 	my $numeric = 1; # TRUE
 	my $decending = 1; # TRUE
-	$table->order($col_name, $numeric, $decending);
+	$table->sort_by_col($col_name, $numeric, $decending);
+	
+	# order rows
+	my @new_order = (<ROW NAMES>);  # an array of row names
+	$table->order_rows(\@new_order);
+	
+	# order columns
+	my @new_order = (<COL NAMES>);  # an array of col names
+	$table->order_cols(\@new_order);
   
   
 =head1 DESCRIPTION
@@ -1771,8 +1779,10 @@ Scalar::Util qw(looks_like_number)
 List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
 Log::Log4perl::CommandLine qw(:all)
+use List::Compare;
 MyX::Generic
 version our $VERSION = qv('0.0.1')
+UtilSY qw(aref_to_href href_to_aref check_ref to_bool)
 
 
 =head1 INCOMPATIBILITIES
@@ -1811,7 +1821,9 @@ None reported.
 	# Others #
 	load_from_file;
 	load_from_href_href
-	order
+	order_rows
+	order_cols
+	sort_by_col
 	save
 	to_str
     change_row_name
@@ -2159,10 +2171,38 @@ None reported.
 			  columns in the table.
 	See Also: NA
 	
-=head2 order
+=head2 order_rows
 
-	Title: order
-	Usage: $obj->order($col_name, $numeric, $decreasing)
+	Title: order_rows
+	Usage: $obj->order_rows($row_names_aref)
+	Function: Orders the table rows by the given row names
+	Returns: 1 on success
+	Args: -row_names_aref => aref of row names
+	Throws: MyX::Generic::Undef::Param
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Table::Order::Row::NamesNotEquiv
+	Comments: The row names in the table and the given row names must be equal
+			  sets.  They must have the exact same members.
+	See Also: NA
+	
+=head2 order_cols
+
+	Title: order_cols
+	Usage: $obj->order_cols($row_names_aref)
+	Function: Orders the table cols by the given col names
+	Returns: 1 on success
+	Args: -col_names_aref => aref of col names
+	Throws: MyX::Generic::Undef::Param
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Table::Order::Col::NamesNotEquiv
+	Comments: The col names in the table and the given col names must be equal
+			  sets.  They must have the exact same members.
+	See Also: NA
+	
+=head2 sort_by_col
+
+	Title: sort_by_col
+	Usage: $obj->sort_by_col($col_name, $numeric, $decreasing)
 	Function: Orders the table based on a single column
 	Returns: 1 on success
 	Args: -col_name => name of column by which to order
