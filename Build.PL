@@ -12,6 +12,7 @@ my $builder = Module::Build->new(
 		'Array::Utils' => 0,
 		'Scalar::Util' => 0,
 		'List::MoreUtils' => 0,
+		'List::Compare' => 0,
 		'Log::Log4perl' => 0,
 		'Log::Log4perl::CommandLine' => 0,
         'Test::More' => 0,

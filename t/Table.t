@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 276;
+use Test::More tests => 288;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -266,7 +266,65 @@ B,3,4
     is( $table2->to_str(","), $str, "table2 to_str()" );
 }
 
-# test order
+# test order_rows
+{
+    # remember the upper case are rows and lower case are columns
+    my $href = {"A" => {"a" => 1, "b" => 4}, "B" => {"a" => 3, "b" => 2}};
+    my $t1 = Table->new();
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    
+    throws_ok( sub{ $t1->order_rows() },
+              'MyX::Generic::Undef::Param', "order_rows()" );
+    
+    throws_ok( sub{ $t1->order_rows("blah") },
+              'MyX::Generic::Ref::UnsupportedType', "order_rows(blah)" );
+    
+    my @new_order = ("A");
+    throws_ok( sub{ $t1->order_rows(\@new_order) },
+              'MyX::Table::Order::Row::NamesNotEquiv', "order_rows(A)" );
+    
+    @new_order = ("A", "C");
+    throws_ok( sub{ $t1->order_rows(\@new_order) },
+              'MyX::Table::Order::Row::NamesNotEquiv', "order_rows(A,C)" );
+    
+    @new_order = ("B", "A");
+    lives_ok( sub{ $t1->order_rows(\@new_order) },
+             "expected to live -- order_rows(B,A)" );
+    
+    is_deeply( $t1->get_row_names(), ["B", "A"],
+              "get_row_names() after order_rows(B,A)" );
+}
+
+# test order_cols
+{
+    # remember the upper case are rows and lower case are columns
+    my $href = {"A" => {"a" => 1, "b" => 4}, "B" => {"a" => 3, "b" => 2}};
+    my $t1 = Table->new();
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    
+    throws_ok( sub{ $t1->order_cols() },
+              'MyX::Generic::Undef::Param', "order_cols()" );
+    
+    throws_ok( sub{ $t1->order_cols("blah") },
+              'MyX::Generic::Ref::UnsupportedType', "order_cols(blah)" );
+    
+    my @new_order = ("a");
+    throws_ok( sub{ $t1->order_cols(\@new_order) },
+              'MyX::Table::Order::Col::NamesNotEquiv', "order_cols(a)" );
+    
+    @new_order = ("a", "c");
+    throws_ok( sub{ $t1->order_cols(\@new_order) },
+              'MyX::Table::Order::Col::NamesNotEquiv', "order_cols(a,c)" );
+    
+    @new_order = ("b", "a");
+    lives_ok( sub{ $t1->order_cols(\@new_order) },
+             "expected to live -- order_cols(b,a)" );
+    
+    is_deeply( $t1->get_col_names(), ["b", "a"],
+              "get_col_names() after order_cols(b,a)" );
+}
+
+# test sort_by_col
 {
     # NOTE: the order of these tests is important.  Some of the tests use the
     #       table that was opperated on in the previous test so it assumes the output
@@ -278,27 +336,27 @@ B,3,4
     $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
     #print $t1->to_str() . "\n";
     
-    throws_ok( sub{ $t1->order() },
-              'MyX::Generic::Undef::Param', "order()" );
-    throws_ok( sub{ $t1->order("blah") },
-              'MyX::Table::Col::UndefName', "order(blah)" );
+    throws_ok( sub{ $t1->sort_by_col() },
+              'MyX::Generic::Undef::Param', "sort_by_col()" );
+    throws_ok( sub{ $t1->sort_by_col("blah") },
+              'MyX::Table::Col::UndefName', "sort_by_col(blah)" );
     
-    lives_ok( sub{ $t1->order("a") },
-             "expected to live -- order(a)" );
+    lives_ok( sub{ $t1->sort_by_col("a") },
+             "expected to live -- sort_by_col(a)" );
     is_deeply( $t1->get_row_names(), ["A", "B"],
-              "get_row_names() after order(a)" );
+              "get_row_names() after sort_by_col(a)" );
     
-    lives_ok( sub{ $t1->order("b") },
-             "expected to live -- order(b)" );
+    lives_ok( sub{ $t1->sort_by_col("b") },
+             "expected to live -- sort_by_col(b)" );
     is_deeply( $t1->get_row_names(), ["B", "A"],
-              "get_row_names() after order(b)" );
+              "get_row_names() after sort_by_col(b)" );
     
     my $numeric = 1;
     my $decreasing = 1;
-    lives_ok( sub{ $t1->order("b", $numeric, $decreasing) },
-             "expected to live -- order(b)" );
+    lives_ok( sub{ $t1->sort_by_col("b", $numeric, $decreasing) },
+             "expected to live -- sort_by_col(b)" );
     is_deeply( $t1->get_row_names(), ["A", "B"],
-              "get_row_names() after order(b, numeric decreasing)" );
+              "get_row_names() after sort_by_col(b, numeric decreasing)" );
     
     
     # create an alphabetic table to test ordering
@@ -308,16 +366,16 @@ B,3,4
     
     $numeric = 0;
     $decreasing = 0;
-    lives_ok( sub{ $t1->order("a", $numeric, $decreasing) },
-             "expected to live -- order(a)" );
+    lives_ok( sub{ $t1->sort_by_col("a", $numeric, $decreasing) },
+             "expected to live -- sort_by_col(a)" );
     is_deeply( $t1->get_row_names(), ["A", "B"],
-              "get_row_names() after order(a, ascii increasing)" );
+              "get_row_names() after sort_by_col(a, ascii increasing)" );
     
     $decreasing = 1;
-    lives_ok( sub{ $t1->order("b", $numeric, $decreasing) },
-             "expected to live -- order(b)" );
+    lives_ok( sub{ $t1->sort_by_col("b", $numeric, $decreasing) },
+             "expected to live -- sort_by_col(b)" );
     is_deeply( $t1->get_row_names(), ["A", "B"],
-              "get_row_names() after order(b, ascii decreasing)" );
+              "get_row_names() after sort_by_col(b, ascii decreasing)" );
     
 }
 

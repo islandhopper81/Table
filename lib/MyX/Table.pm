@@ -48,6 +48,26 @@ use Exception::Class (
         isa => 'MyX::Table',
     },
     
+    'MyX::Table::Order' => {
+        isa => 'MyX::Table',
+    },
+    
+    'MyX::Table::Order::Row' => {
+        isa => 'MyX::Table::Order',
+    },
+    
+    'MyX::Table::Order::Col' => {
+        isa => 'MyX::Table::Order',
+    },
+    
+    'MyX::Table::Order::Row::NamesNotEquiv' => {
+        isa => 'MyX::Table::Order',
+    },
+    
+    'MyX::Table::Order::Col::NamesNotEquiv' => {
+        isa => 'MyX::Table::Order',
+    },
+    
     
     
     

@@ -14,6 +14,7 @@ use Scalar::Util qw(looks_like_number);
 use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
 use Log::Log4perl::CommandLine qw(:all);
+use List::Compare;
 use MyX::Generic;
 use version; our $VERSION = qv('0.0.1');
 use UtilSY qw(aref_to_href href_to_aref check_ref to_bool);
@@ -60,7 +61,9 @@ my $logger = get_logger();
 	# Others #
 	sub load_from_file;
 	sub load_from_href_href;
-	sub order; # to finish!
+	sub order_rows;
+	sub order_cols;
+	sub sort_by_col;
 	sub save;
 	sub to_str;
 	sub change_row_name;
@@ -587,8 +590,66 @@ my $logger = get_logger();
 		return 1;
 	}
 	
-	sub order {
+	sub order_rows {
+		my ($self, $row_names_aref) = @_;
+		
+		# make sure $row_names_aref is defined
+		_check_defined($row_names_aref, "row_names_aref");
+		
+		# make sure $row_names_aref is an array reference
+		_is_aref($row_names_aref);
+		
+		# make sure all the given row names are in the table row names are equal
+		my $lc = List::Compare->new($row_names_aref, $self->get_row_names());
+		if ( ! $lc->is_LequivalentR() ) {
+			# throw an error
+			MyX::Table::Order::Row::NamesNotEquiv->throw(
+				error => "Row names are not equivalent\n",
+			);
+		}
+		
+		# updated the row_names_order_of attribute
+		my $i = 0;
+		foreach my $name ( @{$row_names_aref} ) {
+			$row_names_order_of{ident $self}->{$name} = $i;
+			$i++;
+		}
+		
+		return(1);
+	}
+	
+	sub order_cols {
+		my ($self, $col_names_aref) = @_;
+		
+		# make sure $col_names_aref is defined
+		_check_defined($col_names_aref, "col_names_aref");
+		
+		# make sure $row_names_aref is an array reference
+		_is_aref($col_names_aref);
+		
+		# make sure all the given col names are in the table col names are equal
+		my $lc = List::Compare->new($col_names_aref, $self->get_col_names());
+		if ( ! $lc->is_LequivalentR() ) {
+			# throw an error
+			MyX::Table::Order::Col::NamesNotEquiv->throw(
+				error => "Col names are not equivalent\n",
+			);
+		}
+		
+		# updated the row_names_order_of attribute
+		my $i = 0;
+		foreach my $name ( @{$col_names_aref} ) {
+			$col_names_order_of{ident $self}->{$name} = $i;
+			$i++;
+		}
+		
+		return(1);
+	}
+	
+	sub sort_by_col {
 		my ($self, $col_name, $numeric, $decending) = @_;
+		
+		# sorts by the values in a given column
 		
 		# TO DO
 		# 1. change the way the params are passed.  Use a hash.  Currently if
@@ -638,11 +699,12 @@ my $logger = get_logger();
 		}
 		
 		# updated the row_names_order_of attribute
-		my $i = 0;
-		foreach my $name ( @sorted_names ) {
-			$row_names_order_of{ident $self}->{$name} = $i;
-			$i++;
-		}
+		$self->order_rows(\@sorted_names);
+		#my $i = 0;
+		#foreach my $name ( @sorted_names ) {
+		#	$row_names_order_of{ident $self}->{$name} = $i;
+		#	$i++;
+		#}
 		
 		return (1);
 	}
