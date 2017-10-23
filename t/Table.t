@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 288;
+use Test::More tests => 290;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -293,6 +293,10 @@ B,3,4
     
     is_deeply( $t1->get_row_names(), ["B", "A"],
               "get_row_names() after order_rows(B,A)" );
+    
+    # make sure the values are ordered
+    is_deeply( $t1->get_col("a"), [3,1],
+               "get_col(a) after order_rows(B,A)" );
 }
 
 # test order_cols
@@ -322,6 +326,10 @@ B,3,4
     
     is_deeply( $t1->get_col_names(), ["b", "a"],
               "get_col_names() after order_cols(b,a)" );
+    
+    # make sure the values are ordered
+    is_deeply( $t1->get_row("A"), [4,1],
+               "get_row(A) after order_cols(b,a)" );
 }
 
 # test sort_by_col

@@ -233,7 +233,18 @@ my $logger = get_logger();
 		$self->_check_row_name($row);
 		my $r = $self->get_row_index($row);
 		
-		return($mat_of{ident $self}->[$r]);
+		my $aref = $mat_of{ident $self}->[$r];
+		
+		# now make sure the values ie columns for this row are correctly ordered
+		my @order = ();
+		foreach my $c ( @{$self->get_col_names()} ) {
+			push @order, $self->get_col_index($c);
+		}
+		my @ordered = ();
+		@ordered[@order] = @{$mat_of{ident $self}->[$r]};
+		
+		#return($mat_of{ident $self}->[$r]);
+		return(\@ordered);
 	}
 	
 	sub get_col {
@@ -251,6 +262,14 @@ my $logger = get_logger();
 			$i++;
 			push @col_arr, $row_aref->[$c];
 		}
+		
+		# at this point the col is ordered as it is in the matrix.  I need to
+		# reorder it according to the ordering of the names
+		my @order = ();
+		foreach my $r ( @{$self->get_row_names()} ) {
+			push @order, $self->get_row_index($r);
+		}
+		@col_arr[@order] = @col_arr;
 		
 		return(\@col_arr);
 	}
@@ -597,7 +616,7 @@ my $logger = get_logger();
 		_check_defined($row_names_aref, "row_names_aref");
 		
 		# make sure $row_names_aref is an array reference
-		_is_aref($row_names_aref);
+		_is_aref($row_names_aref, "row_names_aref");
 		
 		# make sure all the given row names are in the table row names are equal
 		my $lc = List::Compare->new($row_names_aref, $self->get_row_names());
@@ -625,7 +644,7 @@ my $logger = get_logger();
 		_check_defined($col_names_aref, "col_names_aref");
 		
 		# make sure $row_names_aref is an array reference
-		_is_aref($col_names_aref);
+		_is_aref($col_names_aref, "col_names_aref");
 		
 		# make sure all the given col names are in the table col names are equal
 		my $lc = List::Compare->new($col_names_aref, $self->get_col_names());
@@ -754,7 +773,7 @@ my $logger = get_logger();
 		# print the row names and each row in the matrix
 		my $row_count = $self->get_row_count();
 		my $row_names_aref = $self->get_row_names();
-		my $mat_aref = $mat_of{ident $self};
+		my @row_vals = ();  # for reordering the values
 		foreach my $row ( @{$row_names_aref} ) {
 			$str .= $row . $sep;
 			$str .= (join($sep, @{$self->get_row($row)}));
