@@ -729,7 +729,7 @@ my $logger = get_logger();
 	}
 	
 	sub save {
-		my ($self, $file, $sep) = @_;
+		my ($self, $file, $sep, $col_headers) = @_;
 		
 		# NOTE: I assume that the matrix is already in order
 		# 		ie the names index match the order in the 2d array
@@ -744,13 +744,13 @@ my $logger = get_logger();
 				error => "Cannot open file ($file) for writing\n"
 			);
 		
-		print $OUT $self->to_str($sep);
+		print $OUT $self->to_str($sep, $col_headers);
 		
 		return 1;
 	}
 	
 	sub to_str {
-		my ($self, $sep) = @_;
+		my ($self, $sep, $col_headers) = @_;
 		
 		# if the table is empty return an empty string
 		if ( $self->is_empty() ) {
@@ -759,16 +759,25 @@ my $logger = get_logger();
 		
 		$sep = _set_sep($sep);
 		
+		# set the col headers value
+		# if true it will print the column headers
+		if ( _is_defined($col_headers) ) {
+			$col_headers = to_bool($col_headers);
+		}
+		else { $col_headers = 1; } # default is true
+		
 		my $str = "";
 		
-		# check if a row names header is present
-		if ( $self->has_row_names_header() ) {
-			$str .= $self->get_row_names_header() . $sep;
+		if ( $col_headers == 1 ) {
+			# check if a row names header is present
+			if ( $self->has_row_names_header() ) {
+				$str .= $self->get_row_names_header() . $sep;
+			}
+			
+			# print the column headers
+			$str .= (join($sep, @{$self->get_col_names()}));
+			$str .= "\n";
 		}
-		
-		# print the column headers
-		$str .= (join($sep, @{$self->get_col_names()}));
-		$str .= "\n";
 		
 		# print the row names and each row in the matrix
 		my $row_count = $self->get_row_count();
@@ -2244,11 +2253,13 @@ None reported.
 =head2 save
 
 	Title: save
-	Usage: $obj->save($file, $sep)
+	Usage: $obj->save($file, $sep, $col_headers)
 	Function: Outputs the Table as text in the given file
 	Returns: 1 on success
 	Args: -file => path to output file
 	      -sep => delimiter string
+		  -col_headers => boolean indicating to also save the col headers.
+                          default is "T"
 	Throws: MyX::Generic::File::CannotOpen
 	Comments: The default sep value is "\t".
 	See Also: NA
@@ -2256,10 +2267,12 @@ None reported.
 =head2 to_str
 
 	Title: to_str
-	Usage: $obj->to_str($sep)
+	Usage: $obj->to_str($sep, $col_headers)
 	Function: Returns the Table as a string
 	Returns: str
 	Args: -sep => delimiter string
+          -col_headers => boolean indicating to also save the col headers.
+                          default is "T"
 	Throws: NA
 	Comments: The default sep value is "\t".
 	See Also: NA

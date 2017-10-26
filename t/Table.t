@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 290;
+use Test::More tests => 291;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -502,6 +502,16 @@ Q,5,5,4,2,0
 ";
 
     is( $table->to_str(","), $str, "to_str(,)" );
+    
+    # test when I don't want to print the headers
+    my $str2 = "M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0
+";
+    
+    is( $table->to_str(",", "F"), $str2, "to_str(, F)" );
 }
 
 # test save
