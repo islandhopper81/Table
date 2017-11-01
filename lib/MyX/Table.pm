@@ -68,8 +68,13 @@ use Exception::Class (
         isa => 'MyX::Table::Order',
     },
     
+    'MyX::Table::Bind' => {
+        isa => 'MyX::Table',
+    },
     
-    
+    'MyX::Table::Bind::NamesNotEquiv' => {
+        isa => 'MyX::Table::Bind',
+    },
     
 );
 
@@ -137,6 +142,13 @@ see Exception::Class and Exception::Class::Base.
     MyX::Table::Row::NameInTable
     MyX::Table::Col::NameInTable
     MyX::Table::Merge
+    MyX::Table::Order
+    MyX::Table::Order::Row
+    MyX::Table::Order::Col
+    MyX::Table::Order::Row::NamesNotEquiv
+    MyX::Table::Order::Col::NamesNotEquiv
+    MyX::Table::Bind
+    MyX::Table::Bind::NamesNotEquiv
     
     
 =back
@@ -273,6 +285,93 @@ see Exception::Class and Exception::Class::Base.
               when soemthing goes wrong in a merge operation
     Fields: NA
     Inherits: MyX::Table
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Order
+
+    Title: MyX::Table::Order
+    Throw Usage: MyX::Table::Order->throw();
+    Catch Usage: if ( my $e = MyX::Table::Order->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Order exception
+              when something goes wrong while ordering the table
+    Fields: NA
+    Inherits: MyX::Table
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Order::Row
+
+    Title: MyX::Table::Order::Row
+    Throw Usage: MyX::Table::Order::Row->throw();
+    Catch Usage: if ( my $e = MyX::Table::Order::Row->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Order::Row exception
+              when something goes wrong while ordering the table rows
+    Fields: NA
+    Inherits: MyX::Table::Order
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Order::Col
+
+    Title: MyX::Table::Order::Col
+    Throw Usage: MyX::Table::Order::Col->throw();
+    Catch Usage: if ( my $e = MyX::Table::Order::Col->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Order::Col exception
+              when something goes wrong while ordering the table cols
+    Fields: NA
+    Inherits: MyX::Table::Order
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Order::Col::NamesNotEquiv
+
+    Title: MyX::Table::Order::Col::NamesNotEquiv
+    Throw Usage: MyX::Table::Order::Col::NamesNotEquiv->throw();
+    Catch Usage: if ( my $e = MyX::Table::Order::Col::NamesNotEquiv->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Order::Col::NamesNotEquiv exception
+              when the col names are not perfectly equivelant between the table
+              and given ordering
+    Fields: NA
+    Inherits: MyX::Table::Order::Col
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Order::Row::NamesNotEquiv
+
+    Title: MyX::Table::Order::Row::NamesNotEquiv
+    Throw Usage: MyX::Table::Order::Row::NamesNotEquiv->throw();
+    Catch Usage: if ( my $e = MyX::Table::Order::Row::NamesNotEquiv->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Order::Row::NamesNotEquiv exception
+              when the row names are not perfectly equivelant between the table
+              and given ordering
+    Fields: NA
+    Inherits: MyX::Table::Order::Row
+    Comments: NA
+    See Also: NA
+
+=head2 MyX::Table::Bind
+
+    Title: MyX::Table::Bind
+    Throw Usage: MyX::Table::Bind->throw();
+    Catch Usage: if ( my $e = MyX::Table::Bind->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Bind exception
+              when something goes wrong while binding two tables together
+    Fields: NA
+    Inherits: MyX::Table
+    Comments: NA
+    See Also: NA
+    
+=head2 MyX::Table::Bind::NamesNotEquiv
+
+    Title: MyX::Table::Bind::NamesNotEquiv
+    Throw Usage: MyX::Table::Bind::NamesNotEquiv->throw();
+    Catch Usage: if ( my $e = MyX::Table::Bind::NamesNotEquiv->caught() ) { ... }
+    Function: Throw/Catch a MyX::Table::Bind::NamesNotEquiv exception
+              when the row or col names of two tables that are being bound
+              together are not equivelant
+    Fields: NA
+    Inherits: MyX::Table::Bind
     Comments: NA
     See Also: NA
 

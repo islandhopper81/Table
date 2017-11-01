@@ -80,6 +80,8 @@ my $logger = get_logger();
 	sub subset;
 	sub merge;
 	sub _check_merge_params;
+	sub cbind;
+	sub rbind;
 	sub transpose;
 	sub reset;
 	sub copy;
@@ -1358,6 +1360,82 @@ my $logger = get_logger();
 		return($params_href);
 	}
 	
+	sub cbind {
+		my ($self, $tbl2) = @_;
+		
+		# binds tables together by column
+		
+		# check that the tbl2 parameter is defined
+		_check_defined($tbl2, "tbl2");
+		
+		# check that the tbl2 parameter is a Table object
+		check_ref($tbl2, "Table");
+		
+		# check that the number of rows in each column are equal length
+		if ( $self->get_row_count() != $tbl2->get_row_count() ) {
+			MyX::Table::Bind::NamesNotEquiv->throw(
+				error => "Row names not equivalent length in cbind\n"
+			);
+		}
+		
+		# check that the row names in each table match
+		my $lc = List::Compare->new(
+			$self->get_row_names(),
+			$tbl2->get_row_names()
+		);
+		if ( ! $lc->is_LequivalentR() ) {
+			MyX::Table::Bind::NamesNotEquiv->throw(
+				error => "Row names not equivalent in cbind\n"
+			);
+		}
+		
+		foreach my $c ( @{$tbl2->get_col_names()} ) {
+			# note that when I try to add the column to self it will
+			# automatically check that the column name is not already in self
+			$self->add_col($c, $tbl2->get_col($c), $tbl2->get_row_names());
+		}
+		
+		return(1);
+	}
+	
+	sub rbind {
+		my ($self, $tbl2) = @_;
+		
+		# binds tables together by row
+		
+		# check that the tbl2 parameter is defined
+		_check_defined($tbl2, "tbl2");
+		
+		# check that the tbl2 parameter is a Table object
+		check_ref($tbl2, "Table");
+		
+		# check that the number of cols in each row are equal length
+		if ( $self->get_col_count() != $tbl2->get_col_count() ) {
+			MyX::Table::Bind::NamesNotEquiv->throw(
+				error => "Col names not equivalent length in rbind\n"
+			);
+		}
+		
+		# check that the col names in each table match
+		my $lc = List::Compare->new(
+			$self->get_col_names(),
+			$tbl2->get_col_names()
+		);
+		if ( ! $lc->is_LequivalentR() ) {
+			MyX::Table::Bind::NamesNotEquiv->throw(
+				error => "Col names not equivalent in cbind\n"
+			);
+		}
+		
+		foreach my $r ( @{$tbl2->get_row_names()} ) {
+			# note that when I try to add the row to self it will
+			# automatically check that the row name is not already in self
+			$self->add_row($r, $tbl2->get_row($r), $tbl2->get_col_names());
+		}
+		
+		return(1);
+	}
+	
 	sub transpose {
 		my ($self) = @_;
 		
@@ -1869,6 +1947,8 @@ None reported.
 	_check_subset_params
 	merge
 	_check_merge_params
+	cbind
+	rbind
 	transpose
 	reset
 	copy
@@ -2556,6 +2636,9 @@ None reported.
 			  the column from the "y" table to make it a unique header value.
 			  Remember, a Table must have unique column names and unique row
 			  names.
+			  
+			  This function is horribly memory inefficient.  It will need to be
+			  optimized at a later date.
 	See Also: NA
 	
 =head2 _check_merge_params
@@ -2582,6 +2665,38 @@ None reported.
 			  is defined and is a boolean, and makes sure all_y is defined and
 			  is a boolean.
 	See Also: Table::merge
+
+=head2 cbind
+
+	Title: cbind
+	Usage: $tbl1->cbind($tbl2)
+	Function: Binds two tables together by concatenating their columns
+	Returns: 1 on success
+	Args: -tbl2 => Table object to bind to tbl1
+	Throws: MyX::Table::Bind::NamesNotEquiv
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: When running cbind the row names in tbl1 and tbl2 must exact sets
+			  of each other.  If there are extra rows in either table or the
+			  row names are different a MyX::Table::Bind::NamesNotEquiv error
+			  will be thrown.
+	See Also: NA
+	
+=head2 rbind
+
+	Title: rbind
+	Usage: $tbl1->rbind($tbl2)
+	Function: Binds two tables together by concatenating their rows
+	Returns: 1 on success
+	Args: -tbl2 => Table object to bind to tbl1
+	Throws: MyX::Table::Bind::NamesNotEquiv
+			MyX::Generic::Ref::UnsupportedType
+			MyX::Generic::Undef::Param
+	Comments: When running cbind the col names in tbl1 and tbl2 must exact sets
+			  of each other.  If there are extra columns in either table or the
+			  column names are different a MyX::Table::Bind::NamesNotEquiv error
+			  will be thrown.
+	See Also: NA
 
 =head2 transpose
 
@@ -2838,6 +2953,10 @@ performance
 =head2 Table::Sparse
 
 Make a Table object that can handle sparse tables.
+
+=head2 Optimize merge function
+
+It uses a ton of memory.
 
 =head1 AUTHOR
 

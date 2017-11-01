@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 291;
+use Test::More tests => 303;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -920,6 +920,104 @@ C,10,11,NA,NA
 D,NA,NA,12,13
 ";
     is( $merged->to_str(","), $str, "to_str after merge(t2) (extra Y rows)" );
+}
+
+# test cbind
+{
+    # create two table to cbind -- remember big letters are rows
+    my $t1 = Table->new();
+    my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    
+    my $t2 = Table->new();
+    $href = {A => {c=>1, d=>2}, B => {c=>3, d=>4}};
+    $t2->load_from_href_href($href, ["A", "B"], ["c", "d"]);
+    
+    # this is the expected table
+    my $exp_tbl = Table->new();
+    $href = {A => {a=>1, b=>2, c=>1, d=>2}, B => {a=>3, b=>4, c=>3, d=>4}};
+    $exp_tbl->load_from_href_href($href, ["A", "B"], ["a", "b", "c", "d"]);
+    
+    my $bad_tbl1 = Table->new(); # incorrect number of rows
+    $href = {A => {c=>1, d=>2}};
+    $bad_tbl1->load_from_href_href($href, ["A"], ["c", "d"]);
+    
+    my $bad_tbl2 = Table->new(); # non-matching row names
+    $href = {A => {c=>1, d=>2}, C => {c=>3, d=>4}};
+    $bad_tbl2->load_from_href_href($href, ["A", "C"], ["c", "d"]);
+    
+    # check for errors when the tbl2 parameter is missing
+    throws_ok( sub{ $t1->cbind() },
+              'MyX::Generic::Undef::Param', "caught - cbind()" );
+    
+    # check for errors when the tbl2 parameter is not the correct type
+    throws_ok( sub{ $t1->cbind("blah") },
+              'MyX::Generic::Ref::UnsupportedType', "caught - cbind(blah)" );
+    
+    # check for errors when the row counts do not match
+    throws_ok( sub{ $t1->cbind($bad_tbl1) },
+              'MyX::Table::Bind::NamesNotEquiv',
+              "caught - cbind(bad_tbl1) - row counts do not match" );
+    
+    # check for errors when the row names do not match
+    throws_ok( sub{ $t1->cbind($bad_tbl2) },
+              'MyX::Table::Bind::NamesNotEquiv',
+              "caught - cbind(bad_tbl2) - col names do not match" );
+    
+    # check for the correct output
+    lives_ok( sub{ $t1->cbind($t2) },
+             "expected to live -- t1->cbind(t2) ");
+    is( $t1->to_str(","), $exp_tbl->to_str(","),
+       "to_str after t1->cbind(t2)" );
+}
+
+# test rbind
+{
+    # create two table to rbind -- remember big letters are rows
+    my $t1 = Table->new();
+    my $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}};
+    $t1->load_from_href_href($href, ["A", "B"], ["a", "b"]);
+    
+    my $t2 = Table->new();
+    $href = {C => {a=>1, b=>2}, D => {a=>3, b=>4}};
+    $t2->load_from_href_href($href, ["C", "D"], ["a", "b"]);
+    
+    # this is the expected table
+    my $exp_tbl = Table->new();
+    $href = {A => {a=>1, b=>2}, B => {a=>3, b=>4}, C => {a=>1, b=>2}, D => {a=>3, b=>4}};
+    $exp_tbl->load_from_href_href($href, ["A", "B", "C", "D"], ["a", "b"]);
+    
+    my $bad_tbl1 = Table->new();
+    $href = {C => {a=>1}, D => {a=>3,}};
+    $bad_tbl1->load_from_href_href($href, ["C", "D"], ["a"]);
+    
+    my $bad_tbl2 = Table->new();
+    $href = {C => {x=>1, b=>2}, D => {x=>3, b=>4}};
+    $bad_tbl2->load_from_href_href($href, ["C", "D"], ["x", "b"]);
+    
+    # check for errors when the tbl2 parameter is missing
+    throws_ok( sub{ $t1->rbind() },
+              'MyX::Generic::Undef::Param', "caught - rbind()" );
+    
+    # check for errors when the tbl2 parameter is not the correct type
+    throws_ok( sub{ $t1->rbind("blah") },
+              'MyX::Generic::Ref::UnsupportedType', "caught - rbind(blah)" );
+    
+    # check for errors when the col counts do not match
+    throws_ok( sub{ $t1->rbind($bad_tbl1) },
+              'MyX::Table::Bind::NamesNotEquiv',
+              "caught - rbind(bad_tbl1) - col counts do not match" );
+    
+    # check for errors when the col names do not match
+    throws_ok( sub{ $t1->rbind($bad_tbl2) },
+              'MyX::Table::Bind::NamesNotEquiv',
+              "caught - rbind(bad_tbl2) - row names do not match" );
+    
+    # check for the correct output
+    lives_ok( sub{ $t1->rbind($t2) },
+             "expected to live -- t1->rbind(t2) ");
+    is( $t1->to_str(","), $exp_tbl->to_str(","),
+       "to_str after t1->rbind(t2)" );
 }
 
 # test copy
