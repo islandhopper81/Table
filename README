@@ -1,4 +1,4 @@
-Table version 0\.0\.2
+Table version 0.0.2
 
 This module is yet another implementation of a Table object.  The Table is
 implemented here as an array of arrays.  See the man page(s) for more details.
