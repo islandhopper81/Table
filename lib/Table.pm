@@ -88,11 +88,17 @@ my $logger = get_logger();
 	sub has_col;
 	sub has_row_names_header;
 	sub is_empty;
+	sub _load_case_1;
+	sub _load_case_2;
+	sub _load_case_3;
+	sub _load_case_4_or_5;
+	sub _set_default_col_headers;
 	sub _check_header_format;
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
 	sub _has_col_headers;
+	sub _has_row_names;
 	sub _check_row_name;
 	sub _check_col_name;
 	sub _is_aref;
@@ -531,11 +537,11 @@ my $logger = get_logger();
 	}
 	
 	sub load_from_file {
-		my ($self, $file, $sep, $has_col_headers) = @_;
+		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
 		
 		_check_file($file);
 		
-		# set the sep
+		# set the seperator (ie delimitor)
 		$sep = _set_sep($sep);
 		
 		open my $IN, "<", $file or
@@ -544,68 +550,47 @@ my $logger = get_logger();
 				file_name => $file
 			);
 		
-		# the first line should be the column headers
-		# this sets the column counts and names
-		# NOTE: his resets all the attributes that might have been stored
-		# in the $self object
-		if ( _has_col_headers($has_col_headers) ) {
-			chomp(my $headers = <$IN>);
-			my @col_names = split(/$sep/, $headers);
-			$self->_set_col_count(scalar @col_names);
-			$self->_set_col_names(\@col_names);
-			$self->_set_row_names_header(undef);
+		# set the default values for has_col_header and has_row_header
+		$has_col_header = _has_col_headers($has_col_header);
+		$has_row_names = _has_row_names($has_row_names);
+		
+		# figure out the format of the headers.  There are several cases:
+		# 1. no column headers, no row names
+		# 2. no column headers, has row names
+		# 3. has column headers, no row names
+		# 4. has column headers no header for row names, has row names
+		# 5. has column headers with header for row names, has row names (default)
+		
+		# Case 1: has_col_header == F AND has_row_names == F
+		if ( $has_col_header == 0 and $has_row_names == 0 ) {
+			$self->_load_case_1($IN, $sep);
 		}
 		
-		# read in the rows
-		# take of the row names as the rows are input
-		my $is_first_line = 1;
-		my @vals = ();
-		my $row_name;
-		my @row_names = ();
-		my $i;
-		my @tbl = ();
-		foreach my $line ( <$IN> ) { 
-			chomp $line;
-			@vals = split(/$sep/, $line);
+		# Case 2: has_col_header == F AND has_row_names == T
+		elsif ( $has_col_header == 0 and $has_row_names == 1 ) {
+			$self->_load_case_2($IN, $sep);
+		}
+		
+		# Case 3: has_col_header == T AND has_row_names == F
+		elsif ( $has_col_header == 1 and $has_row_names == 0 ) {
+			$self->_load_case_3($IN, $sep);
+		}
+		
+		# Case 4: has_col_header == T AND has_row_names == T (check for row header)
+		# Case 5: has_col_header == T AND has_row_names == T (check for row header)
+		elsif ( $has_col_header == 1 and $has_row_names == 1 ) {
+			# this handles cases 4 and 5 because they are very similar
+			$self->_load_case_4_or_5($IN, $sep);
+		}
+		
+		else {
+			my $msg = "Something went terribly wrong with the ";
+			$msg .= "has_col_headers or has_row_names parameters";
 			
-			# use the first line to check the header format
-			if ( $is_first_line == 1 ) {
-				if ( _has_col_headers($has_col_headers) ) {
-					$self->_check_header_format(scalar @vals);
-				}
-				else {
-					# this is the case where the user has specified that
-					# there is no header line.  Therefore I want to assign
-					# the default headers
-					my $len = scalar @vals;
-					$len--; # don't count the row names
-					$self->_set_col_count($len);
-					
-					$len--; # convert to index
-					my @col_names = (0..$len);
-					$self->_set_col_names(\@col_names);
-					$self->_set_row_names_header(undef);
-				}
-
-				$is_first_line = 0;
-			}
-		
-			$row_name = shift @vals;
-			push @row_names, $row_name;
-			$i = 0;
-			my @row_arr = (); 
-			foreach my $val ( @vals ) {
-				push @row_arr, $val;
-			}
-			push @tbl, \@row_arr;
+			MyX::Generic->throw(
+				error => $msg
+			);
 		}
-		
-		# set the row names
-		$self->_set_row_count(scalar @row_names);
-		$self->_set_row_names(\@row_names);
-		
-		# set the matrix
-		$mat_of{ident $self} = \@tbl;
 		
 		return 1;
 	}
@@ -1541,6 +1526,197 @@ my $logger = get_logger();
 		return 0; # FALSE
 	}
 	
+	sub _load_case_4_or_5 {
+		my ($self, $FH, $sep) = @_;
+		
+		# Case 4 and 5: has_col_header == T AND has_row_names == T. These only
+		# differ because there might be an optional header for the row names. To
+		# determine if there is I will have to look at the second line (ie first
+		# line of values).
+		
+		my $is_header_line = 1;
+		my $is_first_line = 0; # this is the first data line
+		my @col_headers = ();
+		my @row_names = ();
+		my @tbl = ();
+		
+		foreach my $line ( <$FH> ) {
+			chomp $line;
+			my @vals = split(/$sep/, $line);
+			
+			if ( $is_header_line == 1 ) {
+				# add the headers assuming there is now row_name_header
+				# when we look at the next line we can tell if there is a
+				# row_name_header and adjust accordingly
+				@col_headers = split(/$sep/, $line);
+				$self->_set_col_count(scalar @col_headers);
+				$self->_set_col_names(\@col_headers);
+				$self->_set_row_names_header(undef);
+				
+				$is_header_line = 0;
+				$is_first_line = 1;
+				
+				next; # go to the next line
+			}
+			elsif ( $is_first_line == 1 ) {
+				$self->_check_header_format(scalar @vals);
+				$is_first_line = 0;
+				# don't go to the next line yet because i need to save the row
+			}
+			
+			# save the row
+			push @row_names, shift @vals;
+			push @tbl, \@vals;
+		}
+		
+		# set the row names
+		$self->_set_row_count(scalar @row_names);
+		$self->_set_row_names(\@row_names);
+		
+		# set the matrix
+		$mat_of{ident $self} = \@tbl;
+		
+		return 1;
+	}
+	
+	sub _load_case_3 {
+		my ($self, $FH, $sep) = @_;
+		
+		# Case 3: has_col_header == T AND has_row_names == F AND has_row_header == F
+		# Table needs the default row names and already has col headers
+		
+		my $is_first_line = 1;
+		my @row_names = ();
+		my $row_count = 0;
+		my @col_headers = ();
+		my @tbl = ();
+		
+		foreach my $line ( <$FH> ) {
+			chomp $line;
+			my @vals = split(/$sep/, $line);
+			
+			# maybe I could throw a warning here if there is only one column
+			# telling the user they may have use the wrong delimitor
+			
+			# use the first line to get the number of columns to set the headers
+			if ( $is_first_line == 1 ) {
+				@col_headers = split(/$sep/, $line);
+				$self->_set_col_count(scalar @col_headers);
+				$self->_set_col_names(\@col_headers);
+				$self->_set_row_names_header(undef);
+				$is_first_line = 0;
+				next; # to go the next line
+			}
+			
+			# generate default row names
+			push @row_names, $row_count;
+			push @tbl, \@vals;
+			$row_count++;
+		}
+		
+		# set the row names
+		$self->_set_row_count(scalar @row_names);
+		$self->_set_row_names(\@row_names);
+		
+		# set the matrix
+		$mat_of{ident $self} = \@tbl;
+		
+		return 1;
+	}
+	
+	sub _load_case_2 {
+		my ($self, $FH, $sep) = @_;
+		
+		# Case 2: has_col_header == F AND has_row_names == T AND has_row_header == F
+		# Table needs the default col header and already has row names
+		
+		my $is_first_line = 1;
+		my @row_names = ();
+		my @tbl = ();
+		
+		foreach my $line ( <$FH> ) {
+			chomp $line;
+			my @vals = split(/$sep/, $line);
+			
+			# maybe I could throw a warning here if there is only one column
+			# telling the user they may have use the wrong delimitor
+			
+			# use the first line to get the number of columns to set the headers
+			if ( $is_first_line == 1 ) {
+				$self->_set_default_col_headers(scalar @vals - 1);
+				$is_first_line = 0;
+			}
+			
+			push @row_names, shift @vals;
+			push @tbl, \@vals;
+		}
+		
+		# set the row names
+		$self->_set_row_count(scalar @row_names);
+		$self->_set_row_names(\@row_names);
+		
+		# set the matrix
+		$mat_of{ident $self} = \@tbl;
+		
+		return 1;
+	}
+	
+	sub _load_case_1 {
+		my ($self, $FH, $sep) = @_;
+		
+		# Case 1: has_col_header == F AND has_row_names == F AND has_row_header == F
+		# Table is purly a matrix of values so I need to add col headers and
+		# row names
+		
+		my $is_first_line = 1;
+		my $row_count = 0;
+		my @row_names = ();
+		my @tbl = ();
+		
+		foreach my $line ( <$FH> ) {
+			chomp $line;
+			my @vals = split(/$sep/, $line);
+			
+			# maybe I could throw a warning here if these if only one column
+			# telling the user they may have use the wrong delimitor
+			
+			# use the first line to get the number of columns to set the headers
+			if ( $is_first_line == 1 ) {
+				$self->_set_default_col_headers(scalar @vals);
+				$is_first_line = 0;
+			}
+			
+			# generate defualt row names
+			push @row_names, $row_count;
+			push @tbl, \@vals;
+			$row_count++;
+		}
+		
+		# set the row names
+		$self->_set_row_count(scalar @row_names);
+		$self->_set_row_names(\@row_names);
+		
+		# set the matrix
+		$mat_of{ident $self} = \@tbl;
+		
+		return 1;
+	}
+	
+	sub _set_default_col_headers {
+		my ($self, $len) = @_;
+		
+		# set col count
+		$self->_set_col_count($len);
+		
+		# set col headers (with no row names header)
+		$len--; # convert to index
+		my @col_names = (0..$len);
+		$self->_set_col_names(\@col_names);
+		$self->_set_row_names_header(undef);
+		
+		return 1;
+	}
+	
 	sub _check_header_format {
 		my ($self, $line_vals_count) = @_;
 		
@@ -1627,7 +1803,17 @@ my $logger = get_logger();
 			return _to_bool($bool);
 		}
 		
-		return 1;  # the defaul is that is has header (ie true)
+		return 1;  # the default is that it has header (ie true)
+	}
+	
+	sub _has_row_names {
+		my ($bool) = @_;
+		
+		if ( _is_defined($bool) ) {
+			return _to_bool($bool);
+		}
+		
+		return 1; # the default is that it has row headers (ie true)
 	}
 	
 	sub _check_row_name {
@@ -1824,18 +2010,19 @@ index at which it is found in the array.  This allows fast access via the column
 and row names.  The column names should be unique and the row names should be
 unique.  In other words, there cannot be two rows with the name "A".  Similarly,
 there cannot be two columns with the name "A".  There can be one column named
-"A" and one row names "A" in the same table.
+"A" and one row names "A" in the same table.  If the row or column names in your
+table are not unique you can let has_row_names and has_col_header to "False".
+See the documentation for load_from_file() for more details.
 
 There are two recommend ways to populate a table object:
 
 1) load_from_file -- this function parses through a plain text file to populate
-the table object.  The first row should be the column headers.  If there are no
-column headers the table can still be loaded by setting the optional parameters,
-especially the has_col_headers parameter (see load_from_file() documentation).
-The row names can have a header value.  Each row after the header line should
-have a name as the first value.  The sep option can be used to specify a
-delimiter for your file (ie "\t", ",", etc).  This is the recommended and most
-simple way to populate a table object.
+the table object. The default arguments assume the table in the file has both
+row names and column headers. However, tables without row names or without
+column headers are also valid. Additionally the row names can include a header
+value or not. The sep option can be used to specify a delimiter for your file
+(ie "\t", ",", etc).  This is the recommended and most simple way to populate a
+table object. See the documentation for load_from_file() for usage details.
 
 2) load_from_href_href -- in Perl a table with column and row names can be
 stored as hash reference of hash references.  If your data is in this format
@@ -1883,7 +2070,6 @@ Array::Utils qw(:all)
 Scalar::Util qw(looks_like_number)
 List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
-Log::Log4perl::CommandLine qw(:all)
 use List::Compare;
 MyX::Generic
 version our $VERSION = qv('0.0.1')
@@ -1955,11 +2141,17 @@ None reported.
 	has_col
 	has_row_names_header
 	is_empty
+	_load_case_1
+	_load_case_2
+	_load_case_3
+	_load_case_4_or_5
+	_set_default_col_headers
 	_check_header_format
 	_aref_to_href
 	_check_file
 	_set_sep
 	_has_col_headers
+	_has_row_names
 	_check_row_name
 	_check_col_name
 	_check_defined
@@ -2255,27 +2447,35 @@ None reported.
 =head2 load_from_file
 
 	Title: load_from_file
-	Usage: $obj->load_from_file($file, $sep, $has_col_headers)
+	Usage: $obj->load_from_file($file, $sep, $has_col_headers, $has_row_nomes)
 	Function: Loads the data from a delimited file
 	Returns: 1 on success
 	Args: -file => path to file
 	      -sep => delimiter string
-		  -has_col_header => boolen
+		  -has_col_header => boolean
+          -has_row_names => boolean
 	Throws: MyX::Generic::File::CannotOpen
 	        MyX::Table::BadDim
 	        MyX::Table::NamesNotUniq
 			MyX::Generic::Digit::MustBeDigit
 	        MyX::Generic::Digit::TooSmall
+            MyX::Generic
 	Comments: This is the recommended method to load data into a Table object.
-	          It assumes the first line is the column names and the first
-			  column is the row names.  The row names column (ie the first
-			  column) may have a name, but it is not required.
+	          Usng the default settings it assumes the first line is the column
+			  names and the first column is the row names.  The row names column
+			  (ie the first column) may have a name, but it is not required.
 			  
-			  If the first column does not have header values that table can
-			  still be loaded.  When calling the function all the parameters
+			  If the first row does not have header values the table can
+			  still be loaded.  When calling the function, all the parameters
 			  become required included the "has_col_header" boolean parameter.
-			  The column headers we be set to integers from 0 to n-1 number of
+			  The column headers will be set to integers from 0 to n-1 number of
 			  columns in the table.
+			  
+			  If the first column does not have row names the table can
+			  still be loaded.  When calling the function, all the parameters
+			  become required included the "has_row_names" boolean parameter.
+			  The row names will be set to integers from 0 to n-1 number of
+			  rows in the table (excluding the header row).
 	See Also: NA
 	
 =head2 order_rows
@@ -2775,6 +2975,71 @@ None reported.
 	Throws: NA
 	Comments: This function only looks at the col and row counts.  If either of
 			  those is at 0 then the table must be empty.
+	See Also: NA
+
+=head2 _load_case_1
+
+	Title: _load_case_1
+	Usage: $obj->_load_case_1($FH, $sep)
+	Function: Loads a file with no col headers and no row names
+	Returns: bool (0 | 1)
+	Args: -FH => file handle
+          -sep => delimiter
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  
+	See Also: NA
+	
+=head2 _load_case_2
+
+	Title: _load_case_2
+	Usage: $obj->_load_case_2($FH, $sep)
+	Function: Loads a file with no col headers but has row names
+	Returns: bool (0 | 1)
+	Args: -FH => file handle
+          -sep => delimiter
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  
+	See Also: NA
+	
+=head2 _load_case_3
+
+	Title: _load_case_3
+	Usage: $obj->_load_case_3($FH, $sep)
+	Function: Loads a file with col headers but no row names
+	Returns: bool (0 | 1)
+	Args: -FH => file handle
+          -sep => delimiter
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  
+	See Also: NA
+	
+=head2 _load_case_4_or_5
+
+	Title: _load_case_4_or_5
+	Usage: $obj->_load_case_4_or_5($FH, $sep)
+	Function: Loads a file with col headers and row names
+	Returns: bool (0 | 1)
+	Args: -FH => file handle
+          -sep => delimiter
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  Case 4 is when there is no column
+			  header for the row names.
+	See Also: NA
+	
+=head2 _set_default_col_headers
+
+	Title: _set_default_col_headers
+	Usage: $obj->_set_default_col_headers($first_line_vals_count)
+	Function: Checks if one of the column headers is the row name header
+	Returns: bool (0 | 1)
+	Args: -first_line_vals_count => number of values in first line
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  
 	See Also: NA
 
 =head2 _check_header_format

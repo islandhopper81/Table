@@ -1,10 +1,12 @@
 use strict;
 use warnings;
 
-use Test::More tests => 303;
+use Test::More tests => 309;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
+use Log::Log4perl qw(:easy);
+use Log::Log4perl::CommandLine qw(:all);
 
 # others to include
 use File::Temp qw/ tempfile tempdir /;
@@ -17,7 +19,14 @@ BEGIN { use_ok('MyX::Table::Iter'); }
 
 
 # helper subroutines
-sub _make_tbl_file;
+sub _make_tbl_file_c1;
+sub _make_tbl_file_c2;
+sub _make_tbl_file_c3;
+sub _make_tbl_file_c4;
+sub _make_tbl_file_c5;
+
+# get a logger singleton
+my $logger = get_logger();
 
 
 
@@ -178,6 +187,13 @@ lives_ok( sub { $table = Table->new() },
 
 # test load_from_file
 {
+    # There are 5 possible file formats that are accepted
+    # 1. no col headers AND no row headers
+    # 2. no column headers, has row names
+	# 3. has column headers, no row names
+	# 4. has column headers no header for row names, has row names
+	# 5. has column headers with header for row names, has row names (default)
+    
     # make a temp file
     my($fh, $filename) = tempfile();
     
@@ -188,10 +204,15 @@ lives_ok( sub { $table = Table->new() },
     throws_ok( sub{ $table->load_from_file($filename) },
               'MyX::Generic::File::Empty', "load_from_file(empty file) - caught" );
     
-    _make_tbl_file($fh);
-    lives_ok( sub{ $table->load_from_file($filename, ",") },
-             "expected to live -- load_from_file()" );
+    #-------
+    # Case 4
+    #-------
+    # case 4 is the default for many of the downstream test cases
+    _make_tbl_file_c4($fh);
     
+    lives_ok( sub{ $table->load_from_file($filename, ",") },
+             "expected to live -- load_from_file($filename) -- Case 4" );
+
     # check the names to make sure they were set correctly
     is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
               "load_from_file -- look at row names" );
@@ -204,42 +225,70 @@ lives_ok( sub { $table = Table->new() },
     is( $table->has_row_names_header(), 0,
        "load_from_file -- has_row_names_header" );
     
-    
-    ####
-    # test using the second valid file format which includes a header for the
-    # row names
+    #-------
+    # Case 5
+    #-------
     ($fh, $filename) = tempfile();
-    _make_tbl_file2($fh);
+    _make_tbl_file_c5($fh);
      lives_ok( sub{ $table->load_from_file($filename, ",") },
-             "expected to live -- load_from_file() v2" );
+             "expected to live -- load_from_file() -- Case 5" );
     
     # check the names to make sure they were set correctly
     is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
-              "load_from_file -- look at row names v2" );
+              "load_from_file -- look at row names in case 5" );
     is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
-              "load_from_file -- look at col names 2" );
+              "load_from_file -- look at col names in case 5" );
     
     is( $table->get_row_names_header(), "RowNames",
-       "load_from_file - row names header v2" );
+       "load_from_file - row names header in case 5" );
     is( $table->has_row_names_header(), 1,
-       "load_from_file -- has_row_names_header v2" );
+       "load_from_file -- has_row_names_header in case 5" );
     
-    ###
-    # test using the third value format which has no col names
+    #-------
+    # Case 3
+    #-------
     ($fh, $filename) = tempfile();
-    _make_tbl_file3($fh);
-     lives_ok( sub{ $table->load_from_file($filename, ",", "F") },
-             "expected to live -- load_from_file() v3" );
+    _make_tbl_file_c3($fh);
+     lives_ok( sub{ $table->load_from_file($filename, ",", "T", "F") },
+             "expected to live -- load_from_file() -- Case 3" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at row names in case 3" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names in case 3" );
+    
+    #-------
+    # Case 2
+    #-------
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c2($fh);
+     lives_ok( sub{ $table->load_from_file($filename, ",", "F", "T") },
+             "expected to live -- load_from_file() -- Case 2" );
     
     # check the names to make sure they were set correctly
     is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
-              "load_from_file -- look at row names v3" );
+              "load_from_file -- look at row names in case 2" );
     is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
-              "load_from_file -- look at col names v3" );
+              "load_from_file -- look at col names in case 2" );
     
-    # reset to use the version 1 table
+    #-------
+    # Case 1
+    #-------
     ($fh, $filename) = tempfile();
-    _make_tbl_file($fh);
+    _make_tbl_file_c1($fh);
+     lives_ok( sub{ $table->load_from_file($filename, ",", "F", "F") },
+             "expected to live -- load_from_file() -- Case 1" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at row names in case 1" );
+    is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at col names in case 1" );
+    
+    # reset to use the case 4 table
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c4($fh);
     $table->load_from_file($filename, ",");
 }
 
@@ -582,7 +631,7 @@ Y,5,2,3,4,1
     
     # reset the table to be what is in the _make_tbl_file
     my($fh, $filename) = tempfile();
-    _make_tbl_file($fh);
+    _make_tbl_file_c4($fh);
     lives_ok( sub{ $table->load_from_file($filename, ",") },
              "expected to live -- reset the table" );
     
@@ -649,7 +698,7 @@ Q,5,5,4,2,0,5,1
     
     # reset the table to be what is in the _make_tbl_file
     my($fh, $filename) = tempfile();
-    _make_tbl_file($fh);
+    _make_tbl_file_c4($fh);
     lives_ok( sub{ $table->load_from_file($filename, ",") },
              "expected to live -- reset the table" );
 }
@@ -1206,26 +1255,7 @@ D,NA,NA,12,13
 ###############
 # Helper Subs #
 ###############
-sub _make_tbl_file {
-    my ($fh) = @_;
-    
-    # there is a text version of this tree at the bottom
-    
-    my $str = "A,B,C,D,E
-M,0,3,3,5,5
-N,2,0,3,5,5
-O,3,3,0,4,4
-P,5,5,4,0,2
-Q,5,5,4,2,0";
-
-    print $fh $str;
-    
-    close($fh);
-    
-    return 1;
-}
-
-sub _make_tbl_file2 {
+sub _make_tbl_file_c5 {
         my ($fh) = @_;
     
     # this is basically the same as the function above, but it creates the table
@@ -1248,7 +1278,45 @@ Q,5,5,4,2,0";
     return 1;
 }
 
-sub _make_tbl_file3 {
+sub _make_tbl_file_c4 {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "A,B,C,D,E
+M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c3 {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "A,B,C,D,E
+0,3,3,5,5
+2,0,3,5,5
+3,3,0,4,4
+5,5,4,0,2
+5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c2 {
         my ($fh) = @_;
     
     # In this format there are no headers given (ie no col names)
@@ -1260,6 +1328,24 @@ N,2,0,3,5,5
 O,3,3,0,4,4
 P,5,5,4,0,2
 Q,5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c1 {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "0,3,3,5,5
+2,0,3,5,5
+3,3,0,4,4
+5,5,4,0,2
+5,5,4,2,0";
 
     print $fh $str;
     
