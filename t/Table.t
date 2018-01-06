@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 309;
+use Test::More tests => 324;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -285,6 +285,67 @@ lives_ok( sub { $table = Table->new() },
               "load_from_file -- look at row names in case 1" );
     is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
               "load_from_file -- look at col names in case 1" );
+    
+    # ------
+    # test new parameter format
+    # ------
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c5($fh);
+    lives_ok( sub{ $table->load_from_file({file => $filename, sep => ","}) },
+             "expected to live -- load_from_file($filename) -- case 5 new params format" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names case 5 new params" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names case 5 new params" );
+    
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c4($fh);
+    lives_ok( sub{ $table->load_from_file({file => $filename, sep => ","}) },
+             "expected to live -- load_from_file($filename) -- case 4 new params format" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names case 4 new params" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names case 4 new params" );
+    
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c3($fh);
+    lives_ok( sub{ $table->load_from_file({
+                                           file => $filename, sep => ",",
+                                           has_row_names => "F"}) },
+             "expected to live -- load_from_file($filename) -- case 3 new params format" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at row names case 3 new params" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names case 3 new params" );
+    
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c2($fh);
+    lives_ok( sub{ $table->load_from_file({
+                                           file => $filename, sep => ",",
+                                           has_col_header => "F"}) },
+             "expected to live -- load_from_file($filename) -- case 2 new params format" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names case 2 new params" );
+    is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at col names case 2 new params" );
+    
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c1($fh);
+    lives_ok( sub{ $table->load_from_file({
+                                           file => $filename, sep => ",",
+                                           has_col_header => "F",
+                                           has_row_names => "F"}) },
+             "expected to live -- load_from_file($filename) -- case 1 new params format" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at row names case 1 new params" );
+    is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
+              "load_from_file -- look at col names case 1 new params" );
+    
     
     # reset to use the case 4 table
     ($fh, $filename) = tempfile();

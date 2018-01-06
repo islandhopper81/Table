@@ -539,6 +539,42 @@ my $logger = get_logger();
 	sub load_from_file {
 		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
 		
+		# I'm updated the parameter to use a hash ref. This reduces the chance
+		# of misordering the parameters.  Using a hash ref to pass the
+		# parameters is the recommended usage.
+		if ( ref($file) eq "HASH" ) {
+			my $args_href = $file;
+			my %file_vals = map {$_ => 1 } qw(FILE F file f);
+			my %sep_vals = map {$_ => 1 } qw(SEP S sep s );
+			my %hch_vals = map {$_ => 1 } qw(has_col_header has_col_headers );
+			my %hrn_vals = map {$_ => 1 } qw(has_row_names has_row_name );
+			
+			foreach my $file_val ( keys %file_vals ) {
+				if ( defined $args_href->{$file_val} ) {
+					$file = $args_href->{$file_val};
+				}
+			}
+			
+			foreach my $sep_val ( keys %sep_vals ) {
+				if ( defined $args_href->{$sep_val} ) {
+					$sep = $args_href->{$sep_val};
+				}
+			}
+			
+			foreach my $hch_val ( keys %hch_vals ) {
+				if ( defined $args_href->{$hch_val} ) {
+					print "has_col_header\n";
+					$has_col_header = $args_href->{$hch_val};
+				}
+			}
+			
+			foreach my $hrn_val ( keys %hrn_vals ) {
+				if ( defined $args_href->{$hrn_val} ) {
+					$has_row_names = $args_href->{$hrn_val};
+				}
+			}
+		}
+		
 		_check_file($file);
 		
 		# set the seperator (ie delimitor)
@@ -2447,13 +2483,10 @@ None reported.
 =head2 load_from_file
 
 	Title: load_from_file
-	Usage: $obj->load_from_file($file, $sep, $has_col_headers, $has_row_nomes)
+	Usage: $obj->load_from_file($args_href)
 	Function: Loads the data from a delimited file
 	Returns: 1 on success
-	Args: -file => path to file
-	      -sep => delimiter string
-		  -has_col_header => boolean
-          -has_row_names => boolean
+	Args: -args_href => hash reference
 	Throws: MyX::Generic::File::CannotOpen
 	        MyX::Table::BadDim
 	        MyX::Table::NamesNotUniq
@@ -2461,9 +2494,18 @@ None reported.
 	        MyX::Generic::Digit::TooSmall
             MyX::Generic
 	Comments: This is the recommended method to load data into a Table object.
+	          These parameters can be included in the args_href:
+			  file => file with table
+			  sep => delimiter
+			  has_col_headers => boolean
+			  has_row_names => boolen
+	
 	          Usng the default settings it assumes the first line is the column
-			  names and the first column is the row names.  The row names column
-			  (ie the first column) may have a name, but it is not required.
+			  names and the first column is the row names (ie
+			  has_col_header => "T", has_row_names => "T").
+			  
+			  The row names column (ie the first column) may have a name, but it
+			  is not required.
 			  
 			  If the first row does not have header values the table can
 			  still be loaded.  When calling the function, all the parameters
