@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 324;
+use Test::More tests => 328;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -612,6 +612,7 @@ Q,5,5,4,2,0
 ";
 
     is( $table->to_str(","), $str, "to_str(,)" );
+    is( $table->to_str({sep => ","}), $str, "to_str({sep=>\",\"})" );
     
     # test when I don't want to print the headers
     my $str2 = "M,0,3,3,5,5
@@ -622,6 +623,20 @@ Q,5,5,4,2,0
 ";
     
     is( $table->to_str(",", "F"), $str2, "to_str(, F)" );
+    is( $table->to_str({sep => ",", print_col_header => "F"}),
+       $str2, "to_str({sep=>\",\", print_col_header => F})" );
+    
+    # test when I don't want to print the col headers or row names
+    my $str3 = "0,3,3,5,5
+2,0,3,5,5
+3,3,0,4,4
+5,5,4,0,2
+5,5,4,2,0
+";
+    
+    is( $table->to_str(",", "F"), $str2, "to_str(, F)" );
+    is( $table->to_str({sep => ",", print_col_header => "F", print_row_names => "F"}),
+       $str3, "to_str({sep=>\",\", print_col_header => F, print_row_names => F})" );
 }
 
 # test save

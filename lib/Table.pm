@@ -563,7 +563,6 @@ my $logger = get_logger();
 			
 			foreach my $hch_val ( keys %hch_vals ) {
 				if ( defined $args_href->{$hch_val} ) {
-					print "has_col_header\n";
 					$has_col_header = $args_href->{$hch_val};
 				}
 			}
@@ -772,25 +771,51 @@ my $logger = get_logger();
 	}
 	
 	sub to_str {
-		my ($self, $sep, $col_headers) = @_;
+		my ($self, $sep, $print_col_header, $print_row_names) = @_;
+		
+		# I'm updated the parameter to use a hash ref. This reduces the chance
+		# of misordering the parameters.  Using a hash ref to pass the
+		# parameters is the recommended usage.
+		if ( ref($sep) eq "HASH" ) {
+			my $args_href = $sep;
+			my %sep_vals = map {$_ => 1 } qw(SEP S sep s );
+			my %pch_vals = map {$_ => 1 } qw(print_col_header print_col_headers );
+			my %prn_vals = map {$_ => 1 } qw(print_row_names print_row_name );
+
+			foreach my $sep_val ( keys %sep_vals ) {
+				if ( defined $args_href->{$sep_val} ) {
+					$sep = $args_href->{$sep_val};
+				}
+			}
+			
+			foreach my $pch_val ( keys %pch_vals ) {
+				if ( defined $args_href->{$pch_val} ) {
+					$print_col_header = $args_href->{$pch_val};
+				}
+			}
+			
+			foreach my $prn_val ( keys %prn_vals ) {
+				if ( defined $args_href->{$prn_val} ) {
+					$print_row_names = $args_href->{$prn_val};
+				}
+			}
+		}
 		
 		# if the table is empty return an empty string
 		if ( $self->is_empty() ) {
 			return "";
 		}
 		
+		# set the seperator (ie delimitor)
 		$sep = _set_sep($sep);
 		
-		# set the col headers value
-		# if true it will print the column headers
-		if ( _is_defined($col_headers) ) {
-			$col_headers = to_bool($col_headers);
-		}
-		else { $col_headers = 1; } # default is true
+		# set the default values for has_col_header and has_row_header
+		$print_col_header = _has_col_headers($print_col_header);
+		$print_row_names = _has_row_names($print_row_names);
 		
 		my $str = "";
 		
-		if ( $col_headers == 1 ) {
+		if ( $print_col_header == 1 ) {
 			# check if a row names header is present
 			if ( $self->has_row_names_header() ) {
 				$str .= $self->get_row_names_header() . $sep;
@@ -806,7 +831,9 @@ my $logger = get_logger();
 		my $row_names_aref = $self->get_row_names();
 		my @row_vals = ();  # for reordering the values
 		foreach my $row ( @{$row_names_aref} ) {
-			$str .= $row . $sep;
+			if ( $print_row_names == 1 ) {
+				$str .= $row . $sep;
+			}
 			$str .= (join($sep, @{$self->get_row($row)}));
 			$str .= "\n";
 		}
@@ -1961,6 +1988,7 @@ This document describes Table version 0.0.1
 
 	# load the table from a file
 	$table->load_from_file("my_table.txt", "\t");
+	$table->load_from_file({file => "my_table.txt", sep => "\t"});
 	
 	# get the number rows and columns
 	my $row_count = $table->get_row_count();
@@ -1985,9 +2013,11 @@ This document describes Table version 0.0.1
 	
 	# print the table tab delimited string
 	$table->to_str("\t");
+	$table->to_str({sep => "\t"});
 	
 	# print the CSV string
 	$table->to_str(",");
+	$table->to_str({sep => ","});
 	
 	# add a row to a table
 	# NOTE: the values must be in the same order as the columns in the table
@@ -2588,14 +2618,19 @@ None reported.
 =head2 to_str
 
 	Title: to_str
-	Usage: $obj->to_str($sep, $col_headers)
+	Usage: $obj->to_str($args_href)
 	Function: Returns the Table as a string
 	Returns: str
-	Args: -sep => delimiter string
+	Args: -args_href => hash reference
           -col_headers => boolean indicating to also save the col headers.
                           default is "T"
 	Throws: NA
-	Comments: The default sep value is "\t".
+	Comments: The parameters can be used as follows:
+	          sep => "\t",
+			  print_col_header => "T"
+			  print_row_names => "T"
+			  
+			  The settings above are the default settings.
 	See Also: NA
 	
 =head2 add_row
