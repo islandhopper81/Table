@@ -1,6 +1,6 @@
 package MyX::Table;
 
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 
 use Exception::Class (
     'MyX::Table' => {
@@ -91,7 +91,7 @@ MyX::Table - A hierarchy of exceptions that can be used in Table.pm
 
 =head1 VERSION
 
-This documentation refers to MyX::Table version 0.0.1.
+This documentation refers to MyX::Table version 0.0.2.
 
 =head1 Included Modules
 

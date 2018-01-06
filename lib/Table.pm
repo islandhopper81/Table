@@ -15,7 +15,7 @@ use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
 use List::Compare;
 use MyX::Generic;
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 use UtilSY qw(aref_to_href href_to_aref check_ref to_bool);
 
 # set up the logging environment
@@ -1976,7 +1976,7 @@ Table - Object for storing and operating on a 2D table
 
 =head1 VERSION
 
-This document describes Table version 0.0.1
+This document describes Table version 0.0.2
 
 
 =head1 SYNOPSIS
@@ -2138,7 +2138,7 @@ List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
 use List::Compare;
 MyX::Generic
-version our $VERSION = qv('0.0.1')
+version our $VERSION
 UtilSY qw(aref_to_href href_to_aref check_ref to_bool)
 
 

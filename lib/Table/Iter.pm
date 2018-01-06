@@ -13,7 +13,7 @@ use Scalar::Util qw(looks_like_number);
 use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
 use MyX::Generic;
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 
 # set up the logging environment
 my $logger = get_logger();
@@ -162,7 +162,7 @@ Table::Iter - Object for iterating through a Table's values
 
 =head1 VERSION
 
-This document describes Table::Iter version 0.0.1
+This document describes Table::Iter version 0.0.2
 
 
 =head1 SYNOPSIS
@@ -216,7 +216,7 @@ List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
 Log::Log4perl::CommandLine qw(:all)
 MyX::Generic
-version our $VERSION = qv('0.0.1')
+version our $VERSION = qv('0\.0\.2')
 
 
 =head1 INCOMPATIBILITIES

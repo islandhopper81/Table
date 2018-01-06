@@ -1,6 +1,6 @@
 package MyX::Table::Iter;
 
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 
 use Exception::Class (
     'MyX::Table::Iter' => {
@@ -25,7 +25,7 @@ MyX::Table::Iter - A hierarchy of exceptions that can be used in Table::Iter.pm
 
 =head1 VERSION
 
-This documentation refers to MyX::Table::Iter version 0.0.1.
+This documentation refers to MyX::Table::Iter version 0.0.2.
 
 =head1 Included Modules
 

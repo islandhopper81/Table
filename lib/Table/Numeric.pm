@@ -15,7 +15,7 @@ use Scalar::Util qw(looks_like_number);
 use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
 use MyX::Generic;
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 use UtilSY 0.0.2 qw(:all);
 
 # set up the logging environment
@@ -194,7 +194,7 @@ Table::Numeric - Object for storing and operating on a 2D table of numbers
 
 =head1 VERSION
 
-This document describes Table::Numeric version 0.0.1
+This document describes Table::Numeric version 0.0.2
 
 
 =head1 SYNOPSIS
@@ -236,7 +236,7 @@ List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
 Log::Log4perl::CommandLine qw(:all)
 MyX::Generic
-version our $VERSION = qv('0.0.1')
+version our $VERSION = qv('0\.0\.2')
 UtilSY
 Table
 

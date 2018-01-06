@@ -9,7 +9,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Carp;
 use Readonly;
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = qv('0.0.2');
 use Log::Log4perl qw(:easy);
 use Log::Log4perl::CommandLine qw(:all);
 use UtilSY qw(:all);
@@ -92,7 +92,7 @@ transpose.pl - transposes a table
 
 =head1 VERSION
 
-This documentation refers to version 0.0.1
+This documentation refers to version 0.0.2
 
 
 =head1 SYNOPSIS
