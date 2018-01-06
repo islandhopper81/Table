@@ -13,7 +13,6 @@ use Array::Utils qw(:all);
 use Scalar::Util qw(looks_like_number);
 use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
-use Log::Log4perl::CommandLine qw(:all);
 use List::Compare;
 use MyX::Generic;
 use version; our $VERSION = qv('0.0.1');
