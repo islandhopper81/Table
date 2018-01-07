@@ -755,8 +755,9 @@ my $logger = get_logger();
 		# NOTE: I assume that the matrix is already in order
 		# 		ie the names index match the order in the 2d array
 		
+		my $args_href = undef;
 		if ( ref($file) eq "HASH" ) {
-			my $args_href = $file;
+			$args_href = $file;
 			my %file_vals = map {$_ => 1 } qw(FILE F file f );
 			
 			foreach my $file_val ( keys %file_vals ) {
@@ -774,11 +775,11 @@ my $logger = get_logger();
 			);
 			
 		my $str;
-		if ( ref($file) eq "HASH" ) {
-			$str = $self->to_str($file);
+		if ( defined $args_href ) {
+			$str = $self->to_str($args_href);
 		}
 		else {
-			$str = $self->to_str($file, $sep, $print_col_header, $print_row_names);
+			$str = $self->to_str($sep, $print_col_header, $print_row_names);
 		}
 		
 		print $OUT $str;
