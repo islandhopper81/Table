@@ -750,22 +750,38 @@ my $logger = get_logger();
 	}
 	
 	sub save {
-		my ($self, $file, $sep, $col_headers) = @_;
+		my ($self, $file, $sep, $print_col_header, $print_row_names) = @_;
 		
 		# NOTE: I assume that the matrix is already in order
 		# 		ie the names index match the order in the 2d array
 		
+		if ( ref($file) eq "HASH" ) {
+			my $args_href = $file;
+			my %file_vals = map {$_ => 1 } qw(FILE F file f );
+			
+			foreach my $file_val ( keys %file_vals ) {
+				if ( defined $args_href->{$file_val} ) {
+					$file = $args_href->{$file_val};
+				}
+			}
+		}
 		# check if the file parameter is defined
 		_check_defined($file, "file");
-		
-		$sep = _set_sep($sep);
 		
 		open my $OUT, ">", $file or
 			MyX::Generic::File::CannotOpen->throw(
 				error => "Cannot open file ($file) for writing\n"
 			);
+			
+		my $str;
+		if ( ref($file) eq "HASH" ) {
+			$str = $self->to_str($file);
+		}
+		else {
+			$str = $self->to_str($file, $sep, $print_col_header, $print_row_names);
+		}
 		
-		print $OUT $self->to_str($sep, $col_headers);
+		print $OUT $str;
 		
 		return 1;
 	}
@@ -2604,15 +2620,21 @@ None reported.
 =head2 save
 
 	Title: save
-	Usage: $obj->save($file, $sep, $col_headers)
+	Usage: $obj->save($args_href)
 	Function: Outputs the Table as text in the given file
 	Returns: 1 on success
-	Args: -file => path to output file
-	      -sep => delimiter string
-		  -col_headers => boolean indicating to also save the col headers.
-                          default is "T"
+	Args: -args_href => hash reference with params
 	Throws: MyX::Generic::File::CannotOpen
-	Comments: The default sep value is "\t".
+	Comments: The parameter values include:
+	          file => path to output file
+	          sep => delimiter string
+		      print_col_header => boolean
+			  print_row_names => boolean
+			  
+			  The default values include
+			  sep => "\t"
+			  print_col_header => "T"
+			  print_row_names => "T"
 	See Also: NA
 	
 =head2 to_str
@@ -2622,8 +2644,6 @@ None reported.
 	Function: Returns the Table as a string
 	Returns: str
 	Args: -args_href => hash reference
-          -col_headers => boolean indicating to also save the col headers.
-                          default is "T"
 	Throws: NA
 	Comments: The parameters can be used as follows:
 	          sep => "\t",

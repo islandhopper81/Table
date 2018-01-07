@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 328;
+use Test::More tests => 330;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -646,12 +646,23 @@ Q,5,5,4,2,0
     throws_ok( sub{ $table->save() },
               'MyX::Generic::Undef::Param', "save()" );
     
-    my($fh, $filename) = tempfile();
+    my ($fh, $filename) = tempfile();
     close($fh);
     lives_ok( sub{ $table->save($filename) },
              "expected to live -- save($filename)" );
     
     cmp_ok( -s $filename, ">", 0, "saved file is not empty" );
+    
+    # test the new parameter format
+    print $table->to_str() . "\n";
+    ($fh, $filename) = tempfile();
+    close($fh);
+    lives_ok( sub{ $table->save({file => $filename,
+                                 print_col_header => "T",
+                                 print_row_names => "T"}) },
+             "expected to live -- save( new parmaeters sytle)" );
+    
+    cmp_ok( -s $filename, ">", 0, "saved file is not empty using new parameter style" );
 }
 
 # test add_row
