@@ -94,6 +94,7 @@ my $logger = get_logger();
 	sub _load_case_4_or_5;
 	sub _set_default_col_headers;
 	sub _check_header_format;
+	sub _count_end_seps;
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
@@ -1625,6 +1626,11 @@ my $logger = get_logger();
 			chomp $line;
 			my @vals = split(/$sep/, $line);
 			
+			# check if the line ends in sep
+			if ( $line =~ m/$sep$/ ) {
+				push @vals, ("") x _count_end_seps($line, $sep);
+			}
+			
 			if ( $is_header_line == 1 ) {
 				# add the headers assuming there is now row_name_header
 				# when we look at the next line we can tell if there is a
@@ -1676,8 +1682,10 @@ my $logger = get_logger();
 			chomp $line;
 			my @vals = split(/$sep/, $line);
 			
-			# maybe I could throw a warning here if there is only one column
-			# telling the user they may have use the wrong delimitor
+			# check if the line ends in sep
+			if ( $line =~ m/$sep$/ ) {
+				push @vals, ("") x _count_end_seps($line, $sep);
+			}
 			
 			# use the first line to get the number of columns to set the headers
 			if ( $is_first_line == 1 ) {
@@ -1719,8 +1727,10 @@ my $logger = get_logger();
 			chomp $line;
 			my @vals = split(/$sep/, $line);
 			
-			# maybe I could throw a warning here if there is only one column
-			# telling the user they may have use the wrong delimitor
+			# check if the line ends in sep
+			if ( $line =~ m/$sep$/ ) {
+				push @vals, ("") x _count_end_seps($line, $sep);
+			}
 			
 			# use the first line to get the number of columns to set the headers
 			if ( $is_first_line == 1 ) {
@@ -1758,8 +1768,10 @@ my $logger = get_logger();
 			chomp $line;
 			my @vals = split(/$sep/, $line);
 			
-			# maybe I could throw a warning here if these if only one column
-			# telling the user they may have use the wrong delimitor
+			# check if the line ends in sep
+			if ( $line =~ m/$sep$/ ) {
+				push @vals, ("") x _count_end_seps($line, $sep);
+			}
 			
 			# use the first line to get the number of columns to set the headers
 			if ( $is_first_line == 1 ) {
@@ -1826,6 +1838,19 @@ my $logger = get_logger();
 		}
 		
 		return 1;
+	}
+	
+	sub _count_end_seps {
+		my ($line, $sep) = @_;
+		
+		my $count = 0;
+		
+		while ( $line =~ m/$sep$/ ) {
+			$line =~ s/$sep$//;
+			$count++;
+		}
+		
+		return($count);
 	}
 	
 	sub _aref_to_href {
@@ -2231,6 +2256,7 @@ None reported.
 	_load_case_4_or_5
 	_set_default_col_headers
 	_check_header_format
+	_count_end_seps
 	_aref_to_href
 	_check_file
 	_set_sep
@@ -3155,6 +3181,21 @@ None reported.
 			  is actually the row header name.  The row header name is optional.
 			  If the row header name is provided it is removed from the column
 			  names array and stored in the row_names_header attribute.
+	See Also: NA
+	
+=head2 _count_end_seps
+
+	Title: _count_end_seps
+	Usage: $obj->_count_end_seps($str, $sep)
+	Function: Counts the number of sep characters trailing in the string
+	Returns: int
+	Args: -str => string
+	      -sep => delimiter
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  This function helps with the case when
+			  there are trailing delimiters on a line (ie empty cells at the
+			  end of the line.)
 	See Also: NA
 	
 =head2 _aref_to_href

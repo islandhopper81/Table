@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 330;
+use Test::More tests => 334;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -24,6 +24,7 @@ sub _make_tbl_file_c2;
 sub _make_tbl_file_c3;
 sub _make_tbl_file_c4;
 sub _make_tbl_file_c5;
+sub _make_tbl_file_missing_vals;
 
 # get a logger singleton
 my $logger = get_logger();
@@ -1338,6 +1339,22 @@ D,NA,NA,12,13
     is( $t->is_empty(), 0, "is_empty() -- false" );
 }
 
+# test _count_end_seps -- function I use when their are trailing seps (ie
+# empty cells)
+{
+    is( Table::_count_end_seps("1,2,3", ","), 0, "_count_end_seps(0)" );
+    is( Table::_count_end_seps("1,2,", ","), 1, "_count_end_seps(1)" );
+    is( Table::_count_end_seps("1,,", ","), 2, "_count_end_seps(2)" );
+}
+
+# test when there are missing values
+{
+    my ($fh, $filename) = tempfile();
+    _make_tbl_file_missing_vals($fh);
+    lives_ok( sub{ $table->load_from_file($filename, ",") },
+             "expected to live -- load_from_file() -- missing values" );
+}
+
 
 ###############
 # Helper Subs #
@@ -1433,6 +1450,25 @@ sub _make_tbl_file_c1 {
 3,3,0,4,4
 5,5,4,0,2
 5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_missing_vals {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "A,B,C,D,E
+M,0,3,,5,5
+N,2,0,3,5,
+O,,3,0,4,4
+P,5,5,4,,
+Q,5,5,4,3,4";
 
     print $fh $str;
     
