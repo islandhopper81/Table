@@ -654,13 +654,13 @@ Q,5,5,4,2,0
     cmp_ok( -s $filename, ">", 0, "saved file is not empty" );
     
     # test the new parameter format
-    print $table->to_str() . "\n";
+    # also implicetly tests the default value for sep
     ($fh, $filename) = tempfile();
     close($fh);
     lives_ok( sub{ $table->save({file => $filename,
                                  print_col_header => "T",
                                  print_row_names => "T"}) },
-             "expected to live -- save( new parmaeters sytle)" );
+             "expected to live -- save( new parmaeters sytle) - $filename" );
     
     cmp_ok( -s $filename, ">", 0, "saved file is not empty using new parameter style" );
 }

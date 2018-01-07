@@ -794,6 +794,7 @@ my $logger = get_logger();
 		# parameters is the recommended usage.
 		if ( ref($sep) eq "HASH" ) {
 			my $args_href = $sep;
+			$sep = undef;
 			my %sep_vals = map {$_ => 1 } qw(SEP S sep s );
 			my %pch_vals = map {$_ => 1 } qw(print_col_header print_col_headers );
 			my %prn_vals = map {$_ => 1 } qw(print_row_names print_row_name );
