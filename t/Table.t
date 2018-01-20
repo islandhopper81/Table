@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 334;
+use Test::More tests => 337;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -449,6 +449,10 @@ B,3,4
     #       table that was opperated on in the previous test so it assumes the output
     #       as the table is after the previous test
     
+    #   a   b
+    # A 1   4
+    # B 3   2
+    
     # remember the upper case are rows and lower case are columns
     my $href = {"A" => {"a" => 1, "b" => 4}, "B" => {"a" => 3, "b" => 2}};
     my $t1 = Table->new();
@@ -469,6 +473,17 @@ B,3,4
              "expected to live -- sort_by_col(b)" );
     is_deeply( $t1->get_row_names(), ["B", "A"],
               "get_row_names() after sort_by_col(b)" );
+    
+    # see what happens when I try getting a column
+    # remember the table was sorted by column b
+    is_deeply( $t1->get_col("a"), [3,1],
+              "get_col(a) after sort_by_col(a)" );
+    is_deeply( $t1->get_col("b"), [2,4],
+              "get_col(a) after sort_by_col(a)" );
+    is( $t1->get_value_at("A", "a"), 1,
+       "get_value_at(A,a) after sort_by_col(b)" );
+    
+    # see what happens when I try getting a row
     
     my $numeric = 1;
     my $decreasing = 1;
