@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 337;
+use Test::More tests => 365;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -653,6 +653,119 @@ Q,5,5,4,2,0
     is( $table->to_str(",", "F"), $str2, "to_str(, F)" );
     is( $table->to_str({sep => ",", print_col_header => "F", print_row_names => "F"}),
        $str3, "to_str({sep=>\",\", print_col_header => F, print_row_names => F})" );
+}
+
+# test rekey_row_names
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>4, c=>3}, B => {a=>3, b=>2, c=>3}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    #   a   b   c
+    # A 1   4   3
+    # B 3   2   3
+    
+    throws_ok( sub{ $t->rekey_row_names() },
+              "MyX::Generic::Undef::Param", "caught - rekey_row_names() ");
+    throws_ok( sub{ $t->rekey_row_names("blah") },
+               "MyX::Table::Col::UndefName",
+               "caught - rekey_col_headers(blah)" );
+    throws_ok( sub{ $t->rekey_row_names("c") },
+              "MyX::Table::NamesNotUniq", "caught - rekey_row_names(c) ");
+    
+    lives_ok( sub{ $t->rekey_row_names("a")},
+              "expected to live - rekey_row_names(a)" );
+    is_deeply( $t->get_row_names(), [1,3],
+               "get_row_names after rekey_row_names(a)" );
+    is( $t->get_row_names_header(), "a", "check row names header - a" );
+    is_deeply( $t->get_col_names(), ["b","c", "old_row_names"],
+               "check new col names" );
+    is_deeply( $t->get_col("old_row_names"), ["A", "B"],
+               "get old row names" );
+    
+    # reset table and test when there is a row_names_header
+    $t->reset();
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    $t->_set_row_names_header("header");
+    lives_ok( sub{ $t->rekey_row_names("a")},
+              "expected to live - rekey_row_names(a)" );
+    is( $t->get_row_names_header(), "a", "check row names header - a" );
+    is_deeply( $t->get_col_names(), ["b","c", "header"],
+               "check new col names" );
+    
+    # reset table and test when the new row names header is given in rekey
+    $t->reset();
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    $t->_set_row_names_header("header");
+    lives_ok( sub{ $t->rekey_row_names("a", "header2")},
+              "expected to live - rekey_row_names(a)" );
+    is( $t->get_row_names_header(), "a", "check row names header - a" );
+    is_deeply( $t->get_col_names(), ["b","c", "header2"],
+               "check new col names" );
+    
+    
+    # test rekey on a table sorted by column
+    $t->reset();
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    #   a   b   c
+    # B 3   2   3
+    # A 1   4   3
+    $t->sort_by_col("b");
+    lives_ok( sub{ $t->rekey_row_names("a") },
+              "expected to live - rekey_row_names(a)" );
+    is_deeply( $t->get_row_names(), [3,1],
+               "get_row_names after rekey_row_names(a) - [3,1]" );
+    is_deeply( $t->get_col("old_row_names"), ["B", "A"],
+               "get old row names" );
+    
+    # now test another sort and rekey
+    $t->sort_by_col("old_row_names");
+    lives_ok( sub{ $t->rekey_row_names("old_row_names") },
+              "expected to live - rekey_row_names(old_row_names) " );
+    is_deeply( $t->get_row_names(), ["A","B"],
+               "get_row_names after rekey_row_names(old_row_names) - [A,B]" );
+    is_deeply( $t->get_col("a"), [1, 3],
+               "get_col(a) - a col goes back to table" );
+    is( $t->get_row_names_header(), "", "get_row_names_header() - empty")
+        
+    # NOTE: after running the rekey the table will no longer be sorted!
+    # NOTE: this this key function will not work on numeric table unless row names are numeric
+}
+
+# test rekey_col_headers
+{
+    # create some test tables
+    my $t = Table->new();
+    my $href = {A => {a=>1, b=>1, c=>1}, B => {a=>3, b=>2, c=>4}};
+    $t->load_from_href_href($href, ["A", "B"], ["a", "b", "c"]);
+    
+    #   a   b   c
+    # A 1   1   1
+    # B 3   2   4
+    
+    throws_ok( sub{ $t->rekey_col_headers() },
+              "MyX::Generic::Undef::Param", "caught - rekey_col_headers() ");
+    throws_ok( sub{ $t->rekey_col_headers("A") },
+              "MyX::Generic::Undef::Param", "caught - rekey_col_headers(A,) ");
+    throws_ok( sub{ $t->rekey_col_headers("blah", "blah") },
+               "MyX::Table::Row::UndefName",
+               "caught - rekey_col_headers(blah, blah)" );
+    throws_ok( sub{ $t->rekey_col_headers("A", "old_col_headers") },
+              "MyX::Table::NamesNotUniq", "caught - rekey_col_headers(A) ");
+    
+    lives_ok( sub{ $t->rekey_col_headers("B", "old_col_headers")},
+              "expected to live - rekey_col_headers(B, old_col_headers)" );
+    is_deeply( $t->get_col_headers(), [3,2,4],
+               "get_row_names after rekey_col_headers(B, old_col_headers)" );
+    is_deeply( $t->get_row("old_col_headers"), ["a", "b", "c"],
+               "get old col headers" );
+    
+    # there is currently no sort by row functionality here so I don't test to
+    # see how that might impact re-keying
+    
+    # NOTE: after running the rekey the table will no longer be sorted!
+    # NOTE: this this key function will not work on numeric table unless row names are numeric
 }
 
 # test save

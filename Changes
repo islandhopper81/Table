@@ -3,6 +3,12 @@ Revision history for Table
 0.0.2  Sat Jan 6 2018
        - row names and col headers are now options for load_from_file and
          to_str
+       - re-key functionality
+       - functions get_col_headers, _set_col_headers are alternative names
+         for get_col_names and _set_col_names
+       - href argument scheme for some functions (eg load_from_file)
+       - can load from files where column headers or row names are not
+         unique by using the has_col_header and has_row_names argument
 
 0.0.1  Tue Oct 25 14:11:46 2016
        Initial release.

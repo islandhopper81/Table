@@ -16,7 +16,7 @@ use Log::Log4perl qw(:easy);
 use List::Compare;
 use MyX::Generic;
 use version; our $VERSION = qv('0.0.2');
-use UtilSY qw(aref_to_href href_to_aref check_ref to_bool);
+use UtilSY qw(aref_to_href href_to_aref check_ref to_bool aref_to_str);
 
 # set up the logging environment
 my $logger = get_logger();
@@ -41,6 +41,7 @@ my $logger = get_logger();
 	sub get_col_count;
 	sub get_row_names;
 	sub get_col_names;
+	sub get_col_headers;
 	sub get_value_at;
 	sub get_value_at_fast;
 	sub get_row;
@@ -63,6 +64,8 @@ my $logger = get_logger();
 	sub order_rows;
 	sub order_cols;
 	sub sort_by_col;
+	sub rekey_row_names;
+	sub rekey_col_headers;
 	sub save;
 	sub to_str;
 	sub change_row_name;
@@ -209,6 +212,14 @@ my $logger = get_logger();
 		}
 		
 		return(\@arr);
+	}
+	
+	sub get_col_headers {
+		my ($self, $by_index) = @_;
+		
+		# an alternate name for get_col_names() function
+		
+		return($self->get_col_names($by_index));
 	}
 	
 	sub get_value_at {
@@ -493,6 +504,14 @@ my $logger = get_logger();
 		return 1;
 	}
 	
+	sub _set_col_headers {
+		my ($self, $col_names_aref) = @_;
+		
+		# a wrapper for an alternate name to _set_col_names
+		
+		return($self->_set_col_names($col_names_aref));
+	}
+	
 	sub _set_row_names_header {
 		my ($self, $row_names_header) = @_;
 		
@@ -748,6 +767,87 @@ my $logger = get_logger();
 		#}
 		
 		return (1);
+	}
+	
+	sub rekey_row_names {
+		my ($self, $col_name, $new_col_header) = @_;
+		
+		# given a column, use this column as the new row names
+
+		# set the row_names_header. needed to name the old column of row names
+		if ( ! _is_defined($new_col_header) ) {
+			if ( $self->has_row_names_header() ) {
+				$new_col_header = $self->get_row_names_header();
+			}
+			else {
+				$new_col_header = "old_row_names";
+			}
+		}
+		
+		# check the column to make sure the values are uniq
+		my $new_row_names = $self->get_col($col_name);
+		my $row_names_href = _aref_to_href($new_row_names);
+		if ( $self->get_row_count() != scalar(keys %{$row_names_href}) ) {
+			MyX::Table::NamesNotUniq->throw(
+				error => "Cannot rekey because values in $col_name not uniq\n",
+				dim => "Col"
+			);
+		}
+		
+		# set the old row names as a new column
+		my $old_row_names = $self->get_row_names();
+		$self->add_col($new_col_header, $old_row_names);
+		
+		# set the given column as the new row names
+		$self->_set_row_names($new_row_names);
+		
+		# set the row names header. If the current row names header is
+		# old_row_names I am setting the row_names_header to ""
+		if ( $col_name =~ m/old_row_names/ ) {
+			$self->_set_row_names_header("");
+		}
+		else {
+			$self->_set_row_names_header($col_name);
+		}
+		
+		# remove the given column that are now the row names
+		$self->drop_col($col_name);
+		
+		return 1;
+	}
+	
+	sub rekey_col_headers {
+		my ($self, $row_name, $new_row_name) = @_;
+		
+		# given a column, use this column as the new row names
+
+		# the new_row_name is required because the column headers are not
+		# named like the row names are.
+		_check_defined($new_row_name, "new_row_name");
+		
+		# check the row to make sure the values are uniq
+		my $new_col_headers = $self->get_row($row_name);
+		my $col_headers_href = _aref_to_href($new_col_headers);
+		if ( $self->get_col_count() != scalar(keys %{$col_headers_href}) ) {
+			MyX::Table::NamesNotUniq->throw(
+				error => "Cannot rekey because values in $row_name not uniq\n",
+				dim => "Row"
+			);
+		}
+		
+		# set the old col headers as a new row
+		my $old_col_headers = $self->get_col_headers();
+		$self->add_row($new_row_name, $old_col_headers);
+		
+		# set the given row as the new col headers
+		$self->_set_col_headers($new_col_headers);
+		
+		# note that row_name will be lost
+		
+		# remove the given column that are now the row names
+		$self->drop_row($row_name);
+		
+		return 1;
 	}
 	
 	sub save {
@@ -2202,6 +2302,7 @@ None reported.
 	get_col_count
 	get_row_names
 	get_col_names
+	get_col_headers
 	get_value_at
 	get_value_at_fast
 	get_row
@@ -2216,6 +2317,7 @@ None reported.
 	_set_col_count
 	_set_row_names
 	_set_col_names
+	_set_col_headers
 	_set_row_names_header
 
 	# Others #
@@ -2224,6 +2326,8 @@ None reported.
 	order_rows
 	order_cols
 	sort_by_col
+	rekey_row_names
+	rekey_col_headers
 	save
 	to_str
     change_row_name
@@ -2338,6 +2442,20 @@ None reported.
 			  sorted.  With a Table that has not invoked the order subroutine
 			  these two name orders will be the same.
 	See Also: NA
+	
+=head2 get_col_headers
+
+	Title: get_col_headers
+	Usage: $obj->get_col_headers($by_index)
+	Function: Returns the column names in the order of their index
+	Returns: aref
+	Args: -by_index => an optional booling indicating to get the column headers
+	                   ordered by their index in the actual table and NOT their
+					   defined sorted order
+	Throws: NA
+	Comments: This is an alternate name for get_col_names.  It functions exactly
+	          the same.
+	See Also: get_col_names
 	
 =head2 get_value_at
 
@@ -2525,6 +2643,20 @@ None reported.
 			  repeated names)
 	See Also: NA
 	
+=head2 _set_col_headers
+
+	Title: _set_col_headers
+	Usage: $obj->_set_col_headers($col_names_aref)
+	Function: Sets the col headers
+	Returns: 1 on success
+	Args: -col_names_aref => array reference of col headers
+	Throws: MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+	Comments: PRIVATE!  Do NOT call this method outside of Table.pm.
+	          This is an alternative way to _set_col_names.  They are exactly
+			  the same
+	See Also: _set_col_names
+	
 =head2 _set_row_names_header
 
 	Title: _set_row_names_header
@@ -2643,6 +2775,43 @@ None reported.
 			  Currently a Table can only be sorted by a given column.  It cannot
 			  be sorted by a given row.  Update the comments in the
 			  get_col_names and get_row_names subroutines if this changes.
+	See Also: NA
+	
+=head2 rekey_row_names
+
+	Title: rekey_row_names
+	Usage: $obj->rekey_row_names($col_name, $new_col_header)
+	Function: Re-key the rows in the table using the given column
+	Returns: 1 on success
+	Args: -col_name => name of column by which to re-key
+		  -new_col_header => column header name to use for the old row names
+	Throws: MyX::Table::Col::UndefName
+	        MyX::Generic::Undef::Param
+			MyX::Table::NamesNotUniq
+	Comments: After re-keying a table it is no longer guaranteed to be sorted.
+	          The new_col_header parameter is optional.  If there is no
+			  row_names_header and new_col_header is not defined the column will
+			  be named "old_row_names". The values in the column to use as the
+			  new row keys must all be unique.  An error will be thrown if that
+			  is not the case.
+	See Also: NA
+	
+=head2 rekey_col_headers
+
+	Title: rekey_col_headers
+	Usage: $obj->rekey_col_headers($row_name, $new_row_name)
+	Function: Re-key the columns in the table using the given row
+	Returns: 1 on success
+	Args: -row_name => name of row by which to re-key
+		  -new_row_name => row header name to use for the old column names
+	Throws: MyX::Table::Col::UndefName
+	        MyX::Generic::Undef::Param
+			MyX::Table::NamesNotUniq
+	Comments: After re-keying a table it is no longer guaranteed to be sorted.
+	          The new_row_header parameter is required because column headers
+			  do not have a name like the row names have a header. Note that the
+			  row_name cannot be saved and is lost when that row is set as the
+			  new column headers.
 	See Also: NA
 	
 =head2 save
