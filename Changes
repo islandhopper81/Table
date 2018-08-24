@@ -1,9 +1,5 @@
 Revision history for Table
 
-0.0.3  --------
-       - A comment character argument can be provided to load_from_file.
-         Using this argument comment lines in the file can be ignored.
-
 0.0.2  Sat Jan 6 2018
        - row names and col headers are now options for load_from_file and
          to_str
