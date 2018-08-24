@@ -27,6 +27,7 @@ my $logger = get_logger();
 	Readonly::Scalar my $SEP => "\t";
     Readonly::Scalar my $COMM_CHAR => undef;
     Readonly::Scalar my $SKIP_AFTER => undef;
+    Readonly::Scalar my $SKIP_BEFORE => undef;
 
 	# Attributes #
 	my %row_count_of;
@@ -99,6 +100,7 @@ my $logger = get_logger();
 	sub _load_case_4_or_5;
     sub _is_comment;
     sub _is_skip_after;
+    sub _is_skip_before;
 	sub _set_default_col_headers;
 	sub _check_header_format;
 	sub _count_end_seps;
@@ -107,6 +109,7 @@ my $logger = get_logger();
 	sub _set_sep;
     sub _set_comm_char;
     sub _set_skip_after;
+    sub _set_skip_before;
 	sub _has_col_headers;
 	sub _has_row_names;
 	sub _check_row_name;
@@ -565,7 +568,7 @@ my $logger = get_logger();
 	sub load_from_file {
 		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
 
-        my ($comm_char, $skip_after);
+        my ($comm_char, $skip_after, $skip_before);
 		
 		# I'm updated the parameter to use a hash ref. This reduces the chance
 		# of misordering the parameters.  Using a hash ref to pass the
@@ -578,6 +581,7 @@ my $logger = get_logger();
 			my %hrn_args = map {$_ => 1 } qw(has_row_names has_row_name );
             my %comm_char_args = map {$_ => 1 } qw(comm_char);
             my %skip_after_args = map {$_ => 1 } qw(skip_after);
+            my %skip_before_args = map {$_ => 1 } qw(skip_before);
 			
 			foreach my $file_arg ( keys %file_args ) {
 				if ( defined $args_href->{$file_arg} ) {
@@ -614,6 +618,12 @@ my $logger = get_logger();
                     $skip_after = $args_href->{$skip_after_arg};
                 }
             }
+            
+            foreach my $skip_before_arg ( keys %skip_before_args ) {
+                if ( defined $args_href->{$skip_before_arg} ) {
+                    $skip_before = $args_href->{$skip_before_arg};
+                }
+            }
 		}
 		
 		_check_file($file);
@@ -626,6 +636,9 @@ my $logger = get_logger();
 
         # set the skip after line number
         $skip_after = _set_skip_after($skip_after);
+
+        # set the skip before line number
+        $skip_before = _set_skip_before($skip_before);
 		
 		open my $IN, "<", $file or
 			MyX::Generic::File::CannotOpen->throw(
@@ -646,24 +659,24 @@ my $logger = get_logger();
 		
 		# Case 1: has_col_header == F AND has_row_names == F
 		if ( $has_col_header == 0 and $has_row_names == 0 ) {
-			$self->_load_case_1($IN, $sep, $comm_char, $skip_after);
+			$self->_load_case_1($IN, $sep, $comm_char, $skip_after, $skip_before);
 		}
 		
 		# Case 2: has_col_header == F AND has_row_names == T
 		elsif ( $has_col_header == 0 and $has_row_names == 1 ) {
-			$self->_load_case_2($IN, $sep, $comm_char, $skip_after);
+			$self->_load_case_2($IN, $sep, $comm_char, $skip_after, $skip_before);
 		}
 		
 		# Case 3: has_col_header == T AND has_row_names == F
 		elsif ( $has_col_header == 1 and $has_row_names == 0 ) {
-			$self->_load_case_3($IN, $sep, $comm_char, $skip_after);
+			$self->_load_case_3($IN, $sep, $comm_char, $skip_after, $skip_before);
 		}
 		
 		# Case 4: has_col_header == T AND has_row_names == T (check for row header)
 		# Case 5: has_col_header == T AND has_row_names == T (check for row header)
 		elsif ( $has_col_header == 1 and $has_row_names == 1 ) {
 			# this handles cases 4 and 5 because they are very similar
-			$self->_load_case_4_or_5($IN, $sep, $comm_char, $skip_after);
+			$self->_load_case_4_or_5($IN, $sep, $comm_char, $skip_after, $skip_before);
 		}
 		
 		else {
@@ -1737,7 +1750,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_4_or_5 {
-		my ($self, $FH, $sep, $comm_char, $skip_after) = @_;
+		my ($self, $FH, $sep, $comm_char, $skip_after, $skip_before) = @_;
 		
 		# Case 4 and 5: has_col_header == T AND has_row_names == T. These only
 		# differ because there might be an optional header for the row names. To
@@ -1753,9 +1766,14 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
-            
-            # check if we have reached the end of the desired section
+           
+            # check if we should be skipping lines 
             if ( _is_skip_after($line_number, $skip_after) ) { last; }
+            if ( _is_skip_before($line_number, $skip_before) ) { 
+                $line_number++;
+                next; 
+            }
+
             # increment the line number here but don't use it after this
             $line_number++;
 
@@ -1805,7 +1823,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_3 {
-		my ($self, $FH, $sep, $comm_char, $skip_after) = @_;
+		my ($self, $FH, $sep, $comm_char, $skip_after, $skip_before) = @_;
 		
 		# Case 3: has_col_header == T AND has_row_names == F AND has_row_header == F
 		# Table needs the default row names and already has col headers
@@ -1819,9 +1837,14 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
-
-            # check if we have reached the end of the desired section
+            
+            # check if we should be skipping lines 
             if ( _is_skip_after($line_number, $skip_after) ) { last; }
+            if ( _is_skip_before($line_number, $skip_before) ) { 
+                $line_number++;
+                next; 
+            }
+
             # increment the line number here but don't use it after this
             $line_number++;
             
@@ -1862,7 +1885,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_2 {
-		my ($self, $FH, $sep, $comm_char, $skip_after) = @_;
+		my ($self, $FH, $sep, $comm_char, $skip_after, $skip_before) = @_;
 		
 		# Case 2: has_col_header == F AND has_row_names == T AND has_row_header == F
 		# Table needs the default col header and already has row names
@@ -1875,8 +1898,13 @@ my $logger = get_logger();
 		foreach my $line ( <$FH> ) {
 			chomp $line;
 
-            # check if we have reached the end of the desired section
+            # check if we should be skipping lines 
             if ( _is_skip_after($line_number, $skip_after) ) { last; }
+            if ( _is_skip_before($line_number, $skip_before) ) { 
+                $line_number++;
+                next; 
+            }
+            
             # increment the line number here but don't use it after this
             $line_number++;
             
@@ -1911,7 +1939,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_1 {
-		my ($self, $FH, $sep, $comm_char, $skip_after) = @_;
+		my ($self, $FH, $sep, $comm_char, $skip_after, $skip_before) = @_;
 		
 		# Case 1: has_col_header == F AND has_row_names == F AND has_row_header == F
 		# Table is purly a matrix of values so I need to add col headers and
@@ -1926,11 +1954,15 @@ my $logger = get_logger();
 		foreach my $line ( <$FH> ) {
 			chomp $line;
 
-            # check if we have reached the end of the desired section
+            # check if we should be skipping lines 
             if ( _is_skip_after($line_number, $skip_after) ) { last; }
+            if ( _is_skip_before($line_number, $skip_before) ) { 
+                $line_number++;
+                next;
+            }
+            
             # increment the line number here but don't use it after this
             $line_number++;
-            print "line number: $line_number\n";
             
             # check if the line starts with a comment character
             if ( _is_comment($line, $comm_char) ) { next; }
@@ -1978,6 +2010,15 @@ my $logger = get_logger();
 
         if ( ! defined $skip_after ) { return 0; }
         if ( $line_num > $skip_after ) { return 1; }
+
+        return(0);
+    }
+    
+    sub _is_skip_before {
+        my ($line_num, $skip_before) = @_;
+
+        if ( ! defined $skip_before ) { return 0; }
+        if ( $line_num < $skip_before ) { return 1; }
 
         return(0);
     }
@@ -2127,6 +2168,34 @@ my $logger = get_logger();
         return($skip_after);
     }
 	
+    sub _set_skip_before {
+        my ($skip_before) = @_;
+
+        if ( ! defined $skip_before ) {
+            return($SKIP_AFTER);
+        }
+
+        # make sure it is a digit >= 0
+        # remember the skip args are 1-based
+        # so setting to 0 or 1 will skip nothing
+        
+		# check if row_count is a number
+		if ( ! looks_like_number($skip_before) ) {
+			MyX::Generic::Digit::MustBeDigit->throw(
+				error => "skip_before argument must be a digit > 0\n"
+			);
+		}
+		
+		# make sure the number is >= 0
+		if ( $skip_before < 0 ) {
+			MyX::Generic::Digit::TooSmall->throw(
+				error => "skip_before argument must be a digit > 0\n"
+			);
+		}
+
+        return($skip_before);
+    }
+
 	sub _has_col_headers {
 		my ($bool) = @_;
 		
@@ -2263,6 +2332,7 @@ This document describes Table version 0.0.2
         has_row_names => "T",
         comm_char => "#"
         skip_after => 10
+        skip_before => 2
     });
 	
 	# get the number rows and columns
@@ -2492,6 +2562,7 @@ None reported.
 	_load_case_4_or_5
     _is_comment
     _is_skip_after
+    _is_skip_before
 	_set_default_col_headers
 	_check_header_format
 	_count_end_seps
@@ -2500,6 +2571,7 @@ None reported.
 	_set_sep
     _set_comm_char
     _set_skip_after
+    _set_skip_before
 	_has_col_headers
 	_has_row_names
 	_check_row_name
@@ -2843,6 +2915,7 @@ None reported.
 			  has_row_names => boolen
               comm_char => string
               skip_after => int
+              skip_before => int
 	
 	          Usng the default settings it assumes the first line is the column
 			  names and the first column is the row names (ie
@@ -2877,6 +2950,12 @@ None reported.
               if skip_after => 2 only two lines in the file will be read.  The
               lines start at 1 (ie 1-based).  If skip_after => 0 no lines will be
               read.
+
+              When the skip_after argument is supplied with an integer it will 
+              ignore lines BEFORE the specified skip_before argument.  For
+              example, if skip_before => 2 line 1 will be skipped.  The lines
+              start at 1 (ie 1-based).  If skip_before => no lines will be 
+              skipped.
 	See Also: NA
 	
 =head2 order_rows
@@ -3504,6 +3583,20 @@ None reported.
               skip any lines.  If $skip_after => 0 all lines are skipped.
 	See Also: NA
 	
+=head2 _is_skip_before
+
+	Title: _is_skip_before
+	Usage: _is_skip_before($line_num, $skip_before)
+	Function: Tests if a line should be skipped because it is before $skip_before
+	Returns: bool (0 | 1)
+	Args: -line_num => current line number
+          -skip_before => integer before which lines should be skipped
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  The default is set as undef which will not
+              skip any lines.  If $skip_before => 1 no lines are skipped.
+	See Also: NA
+
 =head2 _set_default_col_headers
 
 	Title: _set_default_col_headers
@@ -3617,10 +3710,26 @@ None reported.
 	Throws: MyX::Generic::Digit::MustBeDigit
 	        MyX::Generic::Digit::TooSmall
 	Comments: This function is PRIVATE!  It should not be invoked by the average
-	          user outside of Table.pm.  If the sep parameter is not defined
+	          user outside of Table.pm.  If the skip_after parameter is not defined
 			  the defualt is returned.  Currently the default is set to undef.
               The $skip_after argument must be an int >= 0.  When 0 is supplied
               all lines are skipped resulting in an empty table.
+	See Also: NA
+	
+=head2 _set_skip_before
+
+	Title: _set_skip_before
+	Usage: _set_skip_before($skip_before)
+	Function: Checks the skip_before value to make sure it is defined and valid
+	Returns: int
+	Args: -skip_before => skip lines before line number $skip_before
+	Throws: MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  If the skip_before parameter is not defined
+			  the defualt is returned.  Currently the default is set to undef.
+              The $skip_before argument must be an int >= 0.  When 0 or 1 is 
+              supplied no lines are skipped.
 	See Also: NA
 	
 =head2 _has_col_headers
