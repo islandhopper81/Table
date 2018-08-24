@@ -25,6 +25,7 @@ my $logger = get_logger();
 	# Usage statement
 	Readonly my $NEW_USAGE => q{ new()};
 	Readonly::Scalar my $SEP => "\t";
+    Readonly::Scalar my $COMM_CHAR => undef;
 
 	# Attributes #
 	my %row_count_of;
@@ -95,12 +96,14 @@ my $logger = get_logger();
 	sub _load_case_2;
 	sub _load_case_3;
 	sub _load_case_4_or_5;
+    sub _is_comment;
 	sub _set_default_col_headers;
 	sub _check_header_format;
 	sub _count_end_seps;
 	sub _aref_to_href;
 	sub _check_file;
 	sub _set_sep;
+    sub _set_comm_char;
 	sub _has_col_headers;
 	sub _has_row_names;
 	sub _check_row_name;
@@ -557,47 +560,57 @@ my $logger = get_logger();
 	}
 	
 	sub load_from_file {
-		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
+		my ($self, $file, $sep, $has_col_header, $has_row_names, $comm_char) = @_;
 		
 		# I'm updated the parameter to use a hash ref. This reduces the chance
 		# of misordering the parameters.  Using a hash ref to pass the
 		# parameters is the recommended usage.
 		if ( ref($file) eq "HASH" ) {
 			my $args_href = $file;
-			my %file_vals = map {$_ => 1 } qw(FILE F file f);
-			my %sep_vals = map {$_ => 1 } qw(SEP S sep s );
-			my %hch_vals = map {$_ => 1 } qw(has_col_header has_col_headers );
-			my %hrn_vals = map {$_ => 1 } qw(has_row_names has_row_name );
+			my %file_args = map {$_ => 1 } qw(FILE F file f);
+			my %sep_args = map {$_ => 1 } qw(SEP S sep s );
+			my %hch_args = map {$_ => 1 } qw(has_col_header has_col_headers );
+			my %hrn_args = map {$_ => 1 } qw(has_row_names has_row_name );
+            my %comm_char_args = map {$_ => 1 } qw(comm_char);
 			
-			foreach my $file_val ( keys %file_vals ) {
-				if ( defined $args_href->{$file_val} ) {
-					$file = $args_href->{$file_val};
+			foreach my $file_arg ( keys %file_args ) {
+				if ( defined $args_href->{$file_arg} ) {
+					$file = $args_href->{$file_arg};
 				}
 			}
 			
-			foreach my $sep_val ( keys %sep_vals ) {
-				if ( defined $args_href->{$sep_val} ) {
-					$sep = $args_href->{$sep_val};
+			foreach my $sep_arg ( keys %sep_args ) {
+				if ( defined $args_href->{$sep_arg} ) {
+					$sep = $args_href->{$sep_arg};
 				}
 			}
 			
-			foreach my $hch_val ( keys %hch_vals ) {
-				if ( defined $args_href->{$hch_val} ) {
-					$has_col_header = $args_href->{$hch_val};
+			foreach my $hch_arg ( keys %hch_args ) {
+				if ( defined $args_href->{$hch_arg} ) {
+					$has_col_header = $args_href->{$hch_arg};
 				}
 			}
 			
-			foreach my $hrn_val ( keys %hrn_vals ) {
-				if ( defined $args_href->{$hrn_val} ) {
-					$has_row_names = $args_href->{$hrn_val};
+			foreach my $hrn_arg ( keys %hrn_args ) {
+				if ( defined $args_href->{$hrn_arg} ) {
+					$has_row_names = $args_href->{$hrn_arg};
 				}
 			}
+
+            foreach my $comm_char_arg ( keys %comm_char_args ) {
+                if ( defined $args_href->{$comm_char_arg} ) {
+                    $comm_char = $args_href->{$comm_char_arg};
+                }
+            }
 		}
 		
 		_check_file($file);
 		
 		# set the seperator (ie delimitor)
 		$sep = _set_sep($sep);
+
+        # set the comment character
+        $comm_char = _set_comm_char($comm_char);
 		
 		open my $IN, "<", $file or
 			MyX::Generic::File::CannotOpen->throw(
@@ -618,24 +631,24 @@ my $logger = get_logger();
 		
 		# Case 1: has_col_header == F AND has_row_names == F
 		if ( $has_col_header == 0 and $has_row_names == 0 ) {
-			$self->_load_case_1($IN, $sep);
+			$self->_load_case_1($IN, $sep, $comm_char);
 		}
 		
 		# Case 2: has_col_header == F AND has_row_names == T
 		elsif ( $has_col_header == 0 and $has_row_names == 1 ) {
-			$self->_load_case_2($IN, $sep);
+			$self->_load_case_2($IN, $sep, $comm_char);
 		}
 		
 		# Case 3: has_col_header == T AND has_row_names == F
 		elsif ( $has_col_header == 1 and $has_row_names == 0 ) {
-			$self->_load_case_3($IN, $sep);
+			$self->_load_case_3($IN, $sep, $comm_char);
 		}
 		
 		# Case 4: has_col_header == T AND has_row_names == T (check for row header)
 		# Case 5: has_col_header == T AND has_row_names == T (check for row header)
 		elsif ( $has_col_header == 1 and $has_row_names == 1 ) {
 			# this handles cases 4 and 5 because they are very similar
-			$self->_load_case_4_or_5($IN, $sep);
+			$self->_load_case_4_or_5($IN, $sep, $comm_char);
 		}
 		
 		else {
@@ -1709,7 +1722,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_4_or_5 {
-		my ($self, $FH, $sep) = @_;
+		my ($self, $FH, $sep, $comm_char) = @_;
 		
 		# Case 4 and 5: has_col_header == T AND has_row_names == T. These only
 		# differ because there might be an optional header for the row names. To
@@ -1724,6 +1737,10 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
+
+            # check if the line starts with a comment character
+            if ( _is_comment($line, $comm_char) ) { next; }
+
 			my @vals = split(/$sep/, $line);
 			
 			# check if the line ends in sep
@@ -1767,7 +1784,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_3 {
-		my ($self, $FH, $sep) = @_;
+		my ($self, $FH, $sep, $comm_char) = @_;
 		
 		# Case 3: has_col_header == T AND has_row_names == F AND has_row_header == F
 		# Table needs the default row names and already has col headers
@@ -1780,6 +1797,10 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
+
+            # check if the line starts with a comment character
+            if ( _is_comment($line, $comm_char) ) { next; }
+            
 			my @vals = split(/$sep/, $line);
 			
 			# check if the line ends in sep
@@ -1814,7 +1835,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_2 {
-		my ($self, $FH, $sep) = @_;
+		my ($self, $FH, $sep, $comm_char) = @_;
 		
 		# Case 2: has_col_header == F AND has_row_names == T AND has_row_header == F
 		# Table needs the default col header and already has row names
@@ -1825,6 +1846,10 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
+
+            # check if the line starts with a comment character
+            if ( _is_comment($line, $comm_char) ) { next; }
+    
 			my @vals = split(/$sep/, $line);
 			
 			# check if the line ends in sep
@@ -1853,7 +1878,7 @@ my $logger = get_logger();
 	}
 	
 	sub _load_case_1 {
-		my ($self, $FH, $sep) = @_;
+		my ($self, $FH, $sep, $comm_char) = @_;
 		
 		# Case 1: has_col_header == F AND has_row_names == F AND has_row_header == F
 		# Table is purly a matrix of values so I need to add col headers and
@@ -1866,6 +1891,10 @@ my $logger = get_logger();
 		
 		foreach my $line ( <$FH> ) {
 			chomp $line;
+
+            # check if the line starts with a comment character
+            if ( _is_comment($line, $comm_char) ) { next; }
+    
 			my @vals = split(/$sep/, $line);
 			
 			# check if the line ends in sep
@@ -1894,6 +1923,15 @@ my $logger = get_logger();
 		
 		return 1;
 	}
+
+    sub _is_comment {
+        my ($line, $comm_char) = @_;
+
+        if ( ! defined $comm_char ) { return 0; }
+        if ( $line =~ m/^\s*$comm_char/ ) { return 1; }
+
+        return(0);
+    }
 	
 	sub _set_default_col_headers {
 		my ($self, $len) = @_;
@@ -2001,6 +2039,16 @@ my $logger = get_logger();
 		
 		return($sep);
 	}
+
+    sub _set_comm_char { 
+        my ($comm_char) = @_;
+
+        if ( ! defined $comm_char ) {
+            return($COMM_CHAR);
+        }
+
+        return($comm_char);
+    }
 	
 	sub _has_col_headers {
 		my ($bool) = @_;
@@ -2131,7 +2179,13 @@ This document describes Table version 0.0.2
 
 	# load the table from a file
 	$table->load_from_file("my_table.txt", "\t");
-	$table->load_from_file({file => "my_table.txt", sep => "\t"});
+	$table->load_from_file({
+        file => "my_table.txt", 
+        sep => "\t", 
+        has_col_header => "T",
+        has_row_names => "T",
+        comm_char => "#"
+    });
 	
 	# get the number rows and columns
 	my $row_count = $table->get_row_count();
@@ -2358,6 +2412,7 @@ None reported.
 	_load_case_2
 	_load_case_3
 	_load_case_4_or_5
+    _is_comment
 	_set_default_col_headers
 	_check_header_format
 	_count_end_seps
@@ -2705,6 +2760,7 @@ None reported.
 			  sep => delimiter
 			  has_col_headers => boolean
 			  has_row_names => boolen
+              comm_char => string
 	
 	          Usng the default settings it assumes the first line is the column
 			  names and the first column is the row names (ie
@@ -2724,6 +2780,15 @@ None reported.
 			  become required included the "has_row_names" boolean parameter.
 			  The row names will be set to integers from 0 to n-1 number of
 			  rows in the table (excluding the header row).
+
+              To ignore comment lines use the comm_char argument to define how
+              comment lines are specified.  For example, if comment lines begin
+              with the character "#" then pass comm_char => "#".  Comment lines
+              are ignored when loading the file.  They are not saved in the 
+              Table object and cannot be restored from a Table object.  Once
+              the Table is loaded from the input file the comment lines are lost.
+              Of course they will still be in the original file from which the
+              Table is loaded as long as that file is not overwritten in any way.
 	See Also: NA
 	
 =head2 order_rows
@@ -3323,6 +3388,19 @@ None reported.
 	          user outside of Table.pm.  Case 4 is when there is no column
 			  header for the row names.
 	See Also: NA
+
+=head2 _is_comment
+
+	Title: _is_comment
+	Usage: _is_comment($line, $comm_char)
+	Function: Tests if a line is a comment or not
+	Returns: bool (0 | 1)
+	Args: -line => line string
+          -comm_char => comment character
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  By default there is no comment character.
+	See Also: NA
 	
 =head2 _set_default_col_headers
 
@@ -3408,6 +3486,23 @@ None reported.
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  If the sep parameter is not defined
 			  the defualt is returned.  Currently the default is set to "\t".
+	See Also: NA
+
+=head2 _set_comm_char
+
+	Title: _set_comm_char
+	Usage: _set_comm_char($comm_char)
+	Function: Sets the comment character
+	Returns: str
+	Args: -comm_char => comment character
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  If the sep parameter is not defined
+			  the defualt is returned.  Currently the default is set to undef,
+              meaning there are no comments in the file.  Note that the comment
+              character is not a Table attribute.  It is not saved in the Table
+              object.  It is only considered when calling the load_from_file
+              function.
 	See Also: NA
 	
 =head2 _has_col_headers
