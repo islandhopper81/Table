@@ -3506,11 +3506,14 @@ None reported.
 =head2 _load_case_1
 
 	Title: _load_case_1
-	Usage: $obj->_load_case_1($FH, $sep)
+	Usage: $obj->_load_case_1($FH, $sep, $comm_char, $skip_after, $skip_before)
 	Function: Loads a file with no col headers and no row names
 	Returns: bool (0 | 1)
 	Args: -FH => file handle
           -sep => delimiter
+          -comm_char => comment character
+          -skip_after => skip lines after this
+          -skip_before => skip lines before this
 	Throws: NA
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  
@@ -3519,11 +3522,14 @@ None reported.
 =head2 _load_case_2
 
 	Title: _load_case_2
-	Usage: $obj->_load_case_2($FH, $sep)
+	Usage: $obj->_load_case_2($FH, $sep, $comm_char, $skip_after, $skip_before)
 	Function: Loads a file with no col headers but has row names
 	Returns: bool (0 | 1)
 	Args: -FH => file handle
           -sep => delimiter
+          -comm_char => comment character
+          -skip_after => skip lines after this
+          -skip_before => skip lines before this
 	Throws: NA
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  
@@ -3532,11 +3538,14 @@ None reported.
 =head2 _load_case_3
 
 	Title: _load_case_3
-	Usage: $obj->_load_case_3($FH, $sep)
+	Usage: $obj->_load_case_3($FH, $sep, $comm_char, $skip_after, $skip_before)
 	Function: Loads a file with col headers but no row names
 	Returns: bool (0 | 1)
 	Args: -FH => file handle
           -sep => delimiter
+          -comm_char => comment character
+          -skip_after => skip lines after this
+          -skip_before => skip lines before this
 	Throws: NA
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  
@@ -3545,11 +3554,14 @@ None reported.
 =head2 _load_case_4_or_5
 
 	Title: _load_case_4_or_5
-	Usage: $obj->_load_case_4_or_5($FH, $sep)
+	Usage: $obj->_load_case_4_or_5($FH, $sep, $comm_char, $skip_after, $skip_before)
 	Function: Loads a file with col headers and row names
 	Returns: bool (0 | 1)
 	Args: -FH => file handle
           -sep => delimiter
+          -comm_char => comment character
+          -skip_before => skip lines before this
+          -skip_after => skip lines after this
 	Throws: NA
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  Case 4 is when there is no column
