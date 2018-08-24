@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 379;
+use Test::More tests => 391;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -26,6 +26,7 @@ sub _make_tbl_file_c4;
 sub _make_tbl_file_c5;
 sub _make_tbl_file_missing_vals;
 sub _make_tbl_file_c1_comm;
+sub _make_tbl_file_c4_sb;
 
 # get a logger singleton
 my $logger = get_logger();
@@ -179,6 +180,20 @@ lives_ok( sub { $table = Table->new() },
 {
     is( Table::_is_comment("not_a_comment", undef), 0, "_is_comment(no)" );
     is( Table::_is_comment("#comment", "#"), 1, "_is_comment(yes)" );
+}
+
+# test _is_skip_after
+{
+    is( Table::_is_skip_after(1, 4), 0, "_is_skip_after(4,1) -- no" );
+    is( Table::_is_skip_after(4, 4), 0, "_is_skip_after(4,4) -- no" );
+    is( Table::_is_skip_after(5, 4), 1, "_is_skip_after(4,5) -- yes" );
+}
+
+# test _is_skip_before
+{
+    is( Table::_is_skip_before(1, 4), 1, "_is_skip_before(4,1) -- yes" );
+    is( Table::_is_skip_before(4, 4), 0, "_is_skip_before(4,4) -- no" );
+    is( Table::_is_skip_before(5, 4), 0, "_is_skip_before(4,5) -- no" );
 }
 
 # test _has_col_headers
@@ -391,9 +406,9 @@ lives_ok( sub { $table = Table->new() },
     
     # check the names to make sure they were set correctly
     is_deeply( $table->get_row_names(), ["M"],
-              "load_from_file -- look at row names case 4 new params" );
+              "load_from_file -- look at row names after skip_after => 2" );
     is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
-              "load_from_file -- look at col names case 4 new params" );
+              "load_from_file -- look at col names after skip_after => 2" );
 
     is( $table->get_row_count(), 1, "load_from_file -- check row count when using skip_after => 2" );
     
@@ -408,6 +423,37 @@ lives_ok( sub { $table = Table->new() },
                                             skip_after => -1
                                            }) },
               'MyX::Generic::Digit::TooSmall', "load_from_file(skip_after => -1) - caught" );
+    
+    #------
+    # test skip_before feature
+    #------
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c4_sb($fh);
+    lives_ok( sub{ $table->load_from_file({
+                                           file => $filename, sep => ",",
+                                           skip_before => 2}) },
+             "expected to live -- load_from_file($filename) -- case 4 skip_before => 2" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- look at row names after skip_before => 2" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names after skip_before => 2" );
+
+    is( $table->get_row_count(), 5, "load_from_file -- check row count when using skip_before => 2" );
+    
+    # check that the function dies when passing illegal skip_before args
+    throws_ok( sub{ $table->load_from_file({
+                                            file => $filename, sep => ",",
+                                            skip_before => "a"
+                                           }) },
+              'MyX::Generic::Digit::MustBeDigit', "load_from_file(skip_before => a) - caught" );
+    throws_ok( sub{ $table->load_from_file({
+                                            file => $filename, sep => ",",
+                                            skip_before => -1
+                                           }) },
+              'MyX::Generic::Digit::TooSmall', "load_from_file(skip_before => -1) - caught" );
+    
     
     
     
@@ -1661,6 +1707,26 @@ sub _make_tbl_file_c1_comm {
 # an inner comment
 5,5,4,0,2
 5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c4_sb { # sb stand for skip_before
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "this line should be skipped
+A,B,C,D,E
+M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0";
 
     print $fh $str;
     
