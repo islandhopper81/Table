@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 373;
+use Test::More tests => 379;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -378,6 +378,37 @@ lives_ok( sub { $table = Table->new() },
               "load_from_file -- look at col names when there is a comment at the beginning" );
 
     is( $table->get_row_count(), 5, "load_from_file -- check row count with comments" );
+
+    #------
+    # test skip_after feature
+    #------
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c4($fh);
+    lives_ok( sub{ $table->load_from_file({
+                                           file => $filename, sep => ",",
+                                           skip_after => 2}) },
+             "expected to live -- load_from_file($filename) -- case 4 skip_after => 2" );
+    
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M"],
+              "load_from_file -- look at row names case 4 new params" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- look at col names case 4 new params" );
+
+    is( $table->get_row_count(), 1, "load_from_file -- check row count when using skip_after => 2" );
+    
+    # check that the function dies when passing illegal skip_after args
+    throws_ok( sub{ $table->load_from_file({
+                                            file => $filename, sep => ",",
+                                            skip_after => "a"
+                                           }) },
+              'MyX::Generic::Digit::MustBeDigit', "load_from_file(skip_after => a) - caught" );
+    throws_ok( sub{ $table->load_from_file({
+                                            file => $filename, sep => ",",
+                                            skip_after => -1
+                                           }) },
+              'MyX::Generic::Digit::TooSmall', "load_from_file(skip_after => -1) - caught" );
+    
     
     
     # reset to use the case 4 table

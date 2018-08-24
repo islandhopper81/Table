@@ -563,9 +563,9 @@ my $logger = get_logger();
 	}
 	
 	sub load_from_file {
-		my ($self, $file, $sep) = @_;
+		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
 
-        my ($has_col_header, $has_row_names, $comm_char, $skip_after);
+        my ($comm_char, $skip_after);
 		
 		# I'm updated the parameter to use a hash ref. This reduces the chance
 		# of misordering the parameters.  Using a hash ref to pass the
