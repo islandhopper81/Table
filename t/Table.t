@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 379;
+use Test::More tests => 365;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -25,7 +25,6 @@ sub _make_tbl_file_c3;
 sub _make_tbl_file_c4;
 sub _make_tbl_file_c5;
 sub _make_tbl_file_missing_vals;
-sub _make_tbl_file_c1_comm;
 
 # get a logger singleton
 my $logger = get_logger();
@@ -167,18 +166,6 @@ lives_ok( sub { $table = Table->new() },
 {
     is( Table::_set_sep(","), ",", "_set_sep(,)" );
     is( Table::_set_sep(), "\t", "_set_sep()" );
-}
-
-# test _set_comm_char
-{
-    is( Table::_set_comm_char("#"), "#", "_set_comm_char(#)" );
-    is( Table::_set_comm_char(), undef, "_set_comm_char()" );
-}
-
-# test _is_comment
-{
-    is( Table::_is_comment("not_a_comment", undef), 0, "_is_comment(no)" );
-    is( Table::_is_comment("#comment", "#"), 1, "_is_comment(yes)" );
 }
 
 # test _has_col_headers
@@ -359,56 +346,6 @@ lives_ok( sub { $table = Table->new() },
               "load_from_file -- look at row names case 1 new params" );
     is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
               "load_from_file -- look at col names case 1 new params" );
-
-    #------
-    # test comment characters
-    #------
-    ($fh, $filename) = tempfile();
-    _make_tbl_file_c1_comm($fh);
-    lives_ok( sub{ $table->load_from_file({
-                                           file => $filename, sep => ",",
-                                           has_col_header => "F",
-                                           has_row_names => "F",
-                                           comm_char => "#"}) },
-             "expected to live -- load_from_file($filename) -- case 1 comment character" );
-    # check the names to make sure they were set correctly
-    is_deeply( $table->get_row_names(), ["0", "1", "2", "3", "4"],
-              "load_from_file -- look at row names when there is a comment at beginning" );
-    is_deeply( $table->get_col_names(), ["0", "1", "2", "3", "4"],
-              "load_from_file -- look at col names when there is a comment at the beginning" );
-
-    is( $table->get_row_count(), 5, "load_from_file -- check row count with comments" );
-
-    #------
-    # test skip_after feature
-    #------
-    ($fh, $filename) = tempfile();
-    _make_tbl_file_c4($fh);
-    lives_ok( sub{ $table->load_from_file({
-                                           file => $filename, sep => ",",
-                                           skip_after => 2}) },
-             "expected to live -- load_from_file($filename) -- case 4 skip_after => 2" );
-    
-    # check the names to make sure they were set correctly
-    is_deeply( $table->get_row_names(), ["M"],
-              "load_from_file -- look at row names case 4 new params" );
-    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
-              "load_from_file -- look at col names case 4 new params" );
-
-    is( $table->get_row_count(), 1, "load_from_file -- check row count when using skip_after => 2" );
-    
-    # check that the function dies when passing illegal skip_after args
-    throws_ok( sub{ $table->load_from_file({
-                                            file => $filename, sep => ",",
-                                            skip_after => "a"
-                                           }) },
-              'MyX::Generic::Digit::MustBeDigit', "load_from_file(skip_after => a) - caught" );
-    throws_ok( sub{ $table->load_from_file({
-                                            file => $filename, sep => ",",
-                                            skip_after => -1
-                                           }) },
-              'MyX::Generic::Digit::TooSmall', "load_from_file(skip_after => -1) - caught" );
-    
     
     
     # reset to use the case 4 table
@@ -1639,26 +1576,6 @@ sub _make_tbl_file_c1 {
     my $str = "0,3,3,5,5
 2,0,3,5,5
 3,3,0,4,4
-5,5,4,0,2
-5,5,4,2,0";
-
-    print $fh $str;
-    
-    close($fh);
-    
-    return 1;
-}
-
-sub _make_tbl_file_c1_comm {
-    my ($fh) = @_;
-    
-    # there is a text version of this tree at the bottom
-    
-    my $str = "# a comment line
-0,3,3,5,5
-2,0,3,5,5
-3,3,0,4,4
-# an inner comment
 5,5,4,0,2
 5,5,4,2,0";
 
