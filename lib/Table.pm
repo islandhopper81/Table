@@ -2262,6 +2262,7 @@ This document describes Table version 0.0.2
         has_col_header => "T",
         has_row_names => "T",
         comm_char => "#"
+        skip_after => 10
     });
 	
 	# get the number rows and columns
@@ -2490,12 +2491,15 @@ None reported.
 	_load_case_3
 	_load_case_4_or_5
     _is_comment
+    _is_skip_after
 	_set_default_col_headers
 	_check_header_format
 	_count_end_seps
 	_aref_to_href
 	_check_file
 	_set_sep
+    _set_comm_char
+    _set_skip_after
 	_has_col_headers
 	_has_row_names
 	_check_row_name
@@ -2838,6 +2842,7 @@ None reported.
 			  has_col_headers => boolean
 			  has_row_names => boolen
               comm_char => string
+              skip_after => int
 	
 	          Usng the default settings it assumes the first line is the column
 			  names and the first column is the row names (ie
@@ -2866,6 +2871,12 @@ None reported.
               the Table is loaded from the input file the comment lines are lost.
               Of course they will still be in the original file from which the
               Table is loaded as long as that file is not overwritten in any way.
+
+              When the skip_after argument is supplied with an integer it will 
+              ignore lines AFTER the specified skip_after argument.  For example,
+              if skip_after => 2 only two lines in the file will be read.  The
+              lines start at 1 (ie 1-based).  If skip_after => 0 no lines will be
+              read.
 	See Also: NA
 	
 =head2 order_rows
@@ -3479,6 +3490,20 @@ None reported.
 	          user outside of Table.pm.  By default there is no comment character.
 	See Also: NA
 	
+=head2 _is_skip_after
+
+	Title: _is_skip_after
+	Usage: _is_skip_after($line_num, $skip_after)
+	Function: Tests if a line should be skipped because it is after $skip_after
+	Returns: bool (0 | 1)
+	Args: -line_num => current line number
+          -skip_after => integer after which lines should be skipped
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  The default is set as undef which will not
+              skip any lines.  If $skip_after => 0 all lines are skipped.
+	See Also: NA
+	
 =head2 _set_default_col_headers
 
 	Title: _set_default_col_headers
@@ -3580,6 +3605,22 @@ None reported.
               character is not a Table attribute.  It is not saved in the Table
               object.  It is only considered when calling the load_from_file
               function.
+	See Also: NA
+
+=head2 _set_skip_after
+
+	Title: _set_skip_after
+	Usage: _set_skip_after($skip_after)
+	Function: Checks the skip_after value to make sure it is defined and valid
+	Returns: int
+	Args: -skip_after => start skipping lines at line number $skip_after
+	Throws: MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  If the sep parameter is not defined
+			  the defualt is returned.  Currently the default is set to undef.
+              The $skip_after argument must be an int >= 0.  When 0 is supplied
+              all lines are skipped resulting in an empty table.
 	See Also: NA
 	
 =head2 _has_col_headers
