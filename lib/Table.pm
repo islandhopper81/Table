@@ -581,8 +581,9 @@ my $logger = get_logger();
         
         my %str_args = map{$_ => 1} qw(string String STRING str STR);
 
+        my $str;
         foreach my $str_arg ( keys %str_args ) {
-            if ( defined $args_href->{$string_arg} ) {
+            if ( defined $args_href->{$str_arg} ) {
                 $str = $args_href->{$str_arg};
             }
         }
@@ -592,7 +593,9 @@ my $logger = get_logger();
         print $fh $str;
         close($fh);
 
-        return(load_from_file($filename));
+        $args_href->{file} = $filename;
+
+        return($self->load_from_file($args_href));
     }
 	
 	sub load_from_file {
@@ -2474,7 +2477,7 @@ there cannot be two columns with the name "A".  There can be one column named
 table are not unique you can let has_row_names and has_col_header to "False".
 See the documentation for load_from_file() for more details.
 
-There are two recommend ways to populate a table object:
+There are four ways to populate a table object:
 
 1) load_from_file -- this function parses through a plain text file to populate
 the table object. The default arguments assume the table in the file has both
@@ -2489,7 +2492,12 @@ stored as hash reference of hash references.  If your data is in this format
 the load_from_href_href function assumes the first level of the hash
 reference corresponds with the rows.
 
-3) add_row (or add_col) -- rows (or columns) can be iteratively added.  This
+3) load_from_string -- this function writes the given string into a temporary
+file and called load_from_file.  It is recommended to use load_from_file
+whenever possible, especially for large tables so the entire string doesn't
+have to be slurped into memory.
+
+4) add_row (or add_col) -- rows (or columns) can be iteratively added.  This
 requires the row and column names to be set previously.  So you basically create
 a table object, set the row and column names, then iteratively add either the
 rows or columns.  This approach is not recommended as it has not be thoroughly
@@ -2506,12 +2514,12 @@ can be done on Table objects.
 
 The Table object is stored as a 2-d array.  This 2-d array can be queried and
 edited using the described methods in conjuction with the row and column names.
-Each column name is linked the index of the corresponding column values found in
-the 2-d array.  The column names are also linked to an ordering.  This allows
-the column order to change without actually changing the structure of the 2-d
-array.  Therefore with the order subroutine is invoked the column name ordering
-attributes are changed, but the 2-d table remains unchanged.  Then if the Table
-is printed it is output by the specidied order.
+Each column name is linked to the index of the corresponding column values 
+found in the 2-d array.  The column names are also linked to an ordering.  This 
+allows the column order to change without actually changing the structure of the
+2-d array.  Therefore when the order subroutine is invoked the column name 
+ordering attributes are changed, but the 2-d table remains unchanged.  Then if 
+the Table is printed it is output by the specidied order.
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
@@ -2530,7 +2538,8 @@ Array::Utils qw(:all)
 Scalar::Util qw(looks_like_number)
 List::MoreUtils qw(any)
 Log::Log4perl qw(:easy)
-use List::Compare;
+List::Compare;
+File::Temp qw(tempfile)
 MyX::Generic
 version our $VERSION
 UtilSY qw(aref_to_href href_to_aref check_ref to_bool)
@@ -2572,8 +2581,9 @@ None reported.
 	_set_row_names_header
 
 	# Others #
-	load_from_file;
+	load_from_file
 	load_from_href_href
+    load_from_string
 	order_rows
 	order_cols
 	sort_by_col
@@ -2944,6 +2954,28 @@ None reported.
 			  $href->{$row}->{$col}.  
 	See Also: NA
 	
+=head2 load_from_string
+
+	Title: load_from_string
+	Usage: $obj->load_from_string($href)
+	Function: Loads the data from an href of hrefs
+	Returns: 1 on success
+	Args: -href => hash reference containing arguments
+	Throws: MyX::Generic::File::CannotOpen
+	        MyX::Table::BadDim
+	        MyX::Table::NamesNotUniq
+			MyX::Generic::Digit::MustBeDigit
+	        MyX::Generic::Digit::TooSmall
+            MyX::Generic
+    Comments: This method loads a table from a string.  It writes the string
+              to a temporary file and then calls load_from_file.  It is 
+              recommended to directly use load_from_file for large tables.
+              The only additional parameter that can be included in the 
+              arg_href is:
+              str => string
+              All other parameters are the same as in load_from_file.
+	See Also: load_from_file
+
 =head2 load_from_file
 
 	Title: load_from_file

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 395;
+use Test::More tests => 401;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -477,7 +477,7 @@ lives_ok( sub { $table = Table->new() },
     $table->load_from_file($filename, ",");
 }
 
-# test _load_from_href_href
+# test load_from_href_href
 {
     my $table2;
     lives_ok( sub{ $table2 = Table->new() },
@@ -498,6 +498,25 @@ A,1,2
 B,3,4
 ";
     is( $table2->to_str(","), $str, "table2 to_str()" );
+}
+
+# test load_from_string
+{
+    my $table3;
+    lives_ok( sub{ $table3 = Table->new() },
+                "Expected to live -- building new table3");
+
+    throws_ok( sub{ $table3->load_from_string() },
+                'MyX::Generic::Undef::Param', "load_from_string() - caught" );
+    my $str = "a\tb\nA\t1\t3\nB\t2\t4\n";
+    my $args = {str => $str, sep => "\t"};
+    lives_ok( sub{ $table3->load_from_string($args) },
+                "expected to live -- load_from_string(args)");
+    
+    is_deeply( $table3->get_col_names(), ["a", "b"], "table3 get_col_names()");
+    is_deeply( $table3->get_row_names(), ["A", "B"], "table3 get_row_names()");
+    
+    is( $table3->to_str("\t"), $str, "table3 to_str()" );
 }
 
 # test order_rows

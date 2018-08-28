@@ -1,6 +1,7 @@
 Revision history for Table
 
 0.0.3  --------
+       - added load_from_string function
        - white space only lines are ignored
        - skip_before and skip_after arguments added to load_from_file.
        - A comment character argument can be provided to load_from_file.
