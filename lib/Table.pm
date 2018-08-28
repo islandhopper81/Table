@@ -14,6 +14,7 @@ use Scalar::Util qw(looks_like_number);
 use List::MoreUtils qw(any);
 use Log::Log4perl qw(:easy);
 use List::Compare;
+use File::Temp qw(tempfile);
 use MyX::Generic;
 use version; our $VERSION = qv('0.0.2');
 use UtilSY qw(aref_to_href href_to_aref check_ref to_bool aref_to_str);
@@ -64,6 +65,7 @@ my $logger = get_logger();
 	# Others #
 	sub load_from_file;
 	sub load_from_href_href;
+    sub load_from_string;
 	sub order_rows;
 	sub order_cols;
 	sub sort_by_col;
@@ -565,6 +567,33 @@ my $logger = get_logger();
 		
 		return 1;
 	}
+
+    sub load_from_string {
+        my ($self, $args_href) = @_;
+
+        # I'm actually printing the string into a temporary file
+        # and then calling load_from_file.  The recommended usage
+        # is to use load_from_file because it can handle larger
+        # tables as the files can be read in chunks and not slurped
+        # into memory in a string.
+
+        my ($fh, $filename) = tempfile();
+        
+        my %str_args = map{$_ => 1} qw(string String STRING str STR);
+
+        foreach my $str_arg ( keys %str_args ) {
+            if ( defined $args_href->{$string_arg} ) {
+                $str = $args_href->{$str_arg};
+            }
+        }
+
+        _check_defined($str, "str");
+
+        print $fh $str;
+        close($fh);
+
+        return(load_from_file($filename));
+    }
 	
 	sub load_from_file {
 		my ($self, $file, $sep, $has_col_header, $has_row_names) = @_;
