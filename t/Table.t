@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 391;
+use Test::More tests => 395;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -454,7 +454,21 @@ lives_ok( sub { $table = Table->new() },
                                            }) },
               'MyX::Generic::Digit::TooSmall', "load_from_file(skip_before => -1) - caught" );
     
+    #------
+    # test when there is empty lines
+    #------
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c4_empty_line($fh); 
+    lives_ok( sub{ $table->load_from_file({file => $filename, sep => ","}) },
+             "expected to live -- load_from_file($filename) -- case 4 with empty lines" );
     
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- with empty lines" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- with empty lines" );
+
+    is( $table->get_row_count(), 5, "load_from_file -- check row count when there are empty lines" );
     
     
     # reset to use the case 4 table
@@ -1727,6 +1741,26 @@ N,2,0,3,5,5
 O,3,3,0,4,4
 P,5,5,4,0,2
 Q,5,5,4,2,0";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c4_empty_line {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    
+    my $str = "A,B,C,D,E
+M,0,3,3,5,5
+N,2,0,3,5,5
+O,3,3,0,4,4
+P,5,5,4,0,2
+Q,5,5,4,2,0
+    ";
 
     print $fh $str;
     

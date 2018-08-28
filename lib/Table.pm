@@ -101,6 +101,7 @@ my $logger = get_logger();
     sub _is_comment;
     sub _is_skip_after;
     sub _is_skip_before;
+    sub _is_whitespace;
 	sub _set_default_col_headers;
 	sub _check_header_format;
 	sub _count_end_seps;
@@ -1779,6 +1780,9 @@ my $logger = get_logger();
 
             # check if the line starts with a comment character
             if ( _is_comment($line, $comm_char) ) { next; }
+            
+            # check if the line is only whitespace
+            if ( _is_whitespace($line) ) { next; }
 
 			my @vals = split(/$sep/, $line);
 			
@@ -1851,6 +1855,9 @@ my $logger = get_logger();
             # check if the line starts with a comment character
             if ( _is_comment($line, $comm_char) ) { next; }
             
+            # check if the line is only whitespace
+            if ( _is_whitespace($line) ) { next; }
+            
 			my @vals = split(/$sep/, $line);
 			
 			# check if the line ends in sep
@@ -1910,6 +1917,9 @@ my $logger = get_logger();
             
             # check if the line starts with a comment character
             if ( _is_comment($line, $comm_char) ) { next; }
+            
+            # check if the line is only whitespace
+            if ( _is_whitespace($line) ) { next; }
     
 			my @vals = split(/$sep/, $line);
 			
@@ -1966,6 +1976,9 @@ my $logger = get_logger();
             
             # check if the line starts with a comment character
             if ( _is_comment($line, $comm_char) ) { next; }
+
+            # check if the line is only whitespace
+            if ( _is_whitespace($line) ) { next; }
     
 			my @vals = split(/$sep/, $line);
 			
@@ -2020,6 +2033,13 @@ my $logger = get_logger();
         if ( ! defined $skip_before ) { return 0; }
         if ( $line_num < $skip_before ) { return 1; }
 
+        return(0);
+    }
+
+    sub _is_whitespace {
+        my ($line) = @_;
+
+        if ($line =~ /^\s*$/) { return(1); }
         return(0);
     }
 	
@@ -2563,6 +2583,7 @@ None reported.
     _is_comment
     _is_skip_after
     _is_skip_before
+    _is_whitespace
 	_set_default_col_headers
 	_check_header_format
 	_count_end_seps
@@ -2956,6 +2977,8 @@ None reported.
               example, if skip_before => 2 line 1 will be skipped.  The lines
               start at 1 (ie 1-based).  If skip_before => no lines will be 
               skipped.
+
+              White space only lines are ignored.
 	See Also: NA
 	
 =head2 order_rows
@@ -3607,6 +3630,20 @@ None reported.
 	Comments: This function is PRIVATE!  It should not be invoked by the average
 	          user outside of Table.pm.  The default is set as undef which will not
               skip any lines.  If $skip_before => 1 no lines are skipped.
+	See Also: NA
+
+=head2 _is_whitespace
+
+	Title: _is_whitespace
+	Usage: _is_whitespace($line)
+	Function: Tests if a line is only whitespace
+	Returns: bool (0 | 1)
+	Args: -line => line string
+	Throws: NA
+	Comments: This function is PRIVATE!  It should not be invoked by the average
+	          user outside of Table.pm.  Lines that only consist of white space
+              are remove/ignored.  However, they are still counted as a line for
+              the purpose of providing skip_before and skip_after values.
 	See Also: NA
 
 =head2 _set_default_col_headers
