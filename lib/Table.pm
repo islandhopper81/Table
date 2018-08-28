@@ -2945,17 +2945,16 @@ None reported.
 			  The row names column (ie the first column) may have a name, but it
 			  is not required.
 			  
-			  If the first row does not have header values the table can
-			  still be loaded.  When calling the function, all the parameters
-			  become required included the "has_col_header" boolean parameter.
-			  The column headers will be set to integers from 0 to n-1 number of
-			  columns in the table.
-			  
 			  If the first column does not have row names the table can
 			  still be loaded.  When calling the function, all the parameters
 			  become required included the "has_row_names" boolean parameter.
 			  The row names will be set to integers from 0 to n-1 number of
 			  rows in the table (excluding the header row).
+
+              Similarly, if the first row is not the column names (ie column
+              headers) the table can still be loaded by setting "has_col_names"
+              to "F".  This will asign each column an integer from 0 to n-1
+              number of columns to be the column names.
 
               To ignore comment lines use the comm_char argument to define how
               comment lines are specified.  For example, if comment lines begin
