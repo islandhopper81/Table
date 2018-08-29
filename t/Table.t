@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 401;
+use Test::More tests => 407;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -27,6 +27,7 @@ sub _make_tbl_file_c5;
 sub _make_tbl_file_missing_vals;
 sub _make_tbl_file_c1_comm;
 sub _make_tbl_file_c4_sb;
+sub _make_tbl_file_c5_trailing;
 
 # get a logger singleton
 my $logger = get_logger();
@@ -469,8 +470,32 @@ lives_ok( sub { $table = Table->new() },
               "load_from_file -- with empty lines" );
 
     is( $table->get_row_count(), 5, "load_from_file -- check row count when there are empty lines" );
-    
-    
+
+
+    #------
+    # test when there are empty headers and columns
+    #-----
+
+    # this will resolve errors I was getting when dealing with tables where every line (including 
+    # the header line had trailing tabs
+    ($fh, $filename) = tempfile();
+    _make_tbl_file_c5_trailing($fh);
+    lives_ok( sub{ $table->load_from_file({file => $filename, sep => ","}) },
+              "expected to live -- load_from_file($filename) -- case 5 with trailing empty values" );
+
+    # make sure there is a row names header
+    is( $table->has_row_names_header(), 1, "load_from_file -- trailing empty values check row_names_header" );
+    # check the names to make sure they were set correctly
+    is_deeply( $table->get_row_names(), ["M", "N", "O", "P", "Q"],
+              "load_from_file -- with empty trailing values" );
+    is_deeply( $table->get_col_names(), ["A", "B", "C", "D", "E"],
+              "load_from_file -- with empty trailing values" );
+
+    is( $table->get_row_count(), 5, "load_from_file -- check row count with empty trailing values" );
+    is( $table->get_col_count(), 5, "load_from_file -- check col count with empty trailing values" );
+
+   
+ 
     # reset to use the case 4 table
     ($fh, $filename) = tempfile();
     _make_tbl_file_c4($fh);
@@ -1799,6 +1824,25 @@ N,2,0,3,5,
 O,,3,0,4,4
 P,5,5,4,,
 Q,5,5,4,3,4";
+
+    print $fh $str;
+    
+    close($fh);
+    
+    return 1;
+}
+
+sub _make_tbl_file_c5_trailing {
+    my ($fh) = @_;
+    
+    # there is a text version of this tree at the bottom
+    # note that I have an empty value in the last line
+    my $str = "RowNames,A,B,C,D,E,
+M,0,3,3,5,5,
+N,2,0,3,5,5,
+O,3,3,0,4,4,
+P,5,5,4,0,2,
+Q,5,5,4,2,,";
 
     print $fh $str;
     

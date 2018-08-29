@@ -1793,6 +1793,8 @@ my $logger = get_logger();
 		my $is_header_line = 1;
 		my $is_first_line = 0; # this is the first data line
         my $line_number = 1;  # line number is 1-based
+        my $header_trailers = 0;  # number of empty cells at end of header. don't keep
+        my $add_trailers;  # declartion only; set later in function
 		my @col_headers = ();
 		my @row_names = ();
 		my @tbl = ();
@@ -1820,13 +1822,15 @@ my $logger = get_logger();
 			
 			# check if the line ends in sep
 			if ( $line =~ m/$sep$/ ) {
-				push @vals, ("") x _count_end_seps($line, $sep);
+                $add_trailers = _count_end_seps($line, $sep) - $header_trailers;
+				push @vals, ("") x $add_trailers;
 			}
 			
 			if ( $is_header_line == 1 ) {
 				# add the headers assuming there is now row_name_header
 				# when we look at the next line we can tell if there is a
 				# row_name_header and adjust accordingly
+                $header_trailers = _count_end_seps($line, $sep);
 				@col_headers = split(/$sep/, $line);
 				$self->_set_col_count(scalar @col_headers);
 				$self->_set_col_names(\@col_headers);
