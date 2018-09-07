@@ -11,7 +11,7 @@ use Readonly;
 use Class::Std::Utils;
 use Array::Utils qw(:all);
 use Scalar::Util qw(looks_like_number);
-use List::MoreUtils qw(any);
+use List::MoreUtils qw(any duplicates);
 use Log::Log4perl qw(:easy);
 use List::Compare;
 use File::Temp qw(tempfile);
@@ -341,7 +341,8 @@ my $logger = get_logger();
 		# check if the current name is in the table
 		if ( ! $self->has_row($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such row name: $current\n"
+				error => "Cannot change row name. Current name is not a row in the table\n",
+                name => $current
 			);
 		}
 		
@@ -365,7 +366,8 @@ my $logger = get_logger();
 		# check if the current name is in the table
 		if ( ! $self->has_col($current) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "No such column name: $current\n"
+                error => "Cannot change column name.  Current name is not a column in the table\n",
+                name => $current
 			);
 		}
 		
@@ -461,8 +463,8 @@ my $logger = get_logger();
 		# check rule 1
 		if ( $self->get_row_count() != scalar @{$row_names_aref} ) {
 			MyX::Table::BadDim->throw(
-				error => "Col count and number of row names does NOT match\n",
-				dim => "Col"
+				error => "Row count in table object and number of row names does NOT match\n",
+				dim => "row"
 			);
 		}
 		
@@ -470,9 +472,11 @@ my $logger = get_logger();
 		my $row_names_href = _aref_to_href($row_names_aref);
 		my $row_names_order_href = _aref_to_href($row_names_aref);
 		if ( $self->get_row_count() != scalar(keys %{$row_names_href}) ) {
+            my $dup =  join(",", duplicates(@{$row_names_aref}));
 			MyX::Table::NamesNotUniq->throw(
 				error => "Col names not unique\n",
-				dim => "Col"
+				dim => "Col",
+                dups => "\"" . join(",", duplicates(@{$row_names_aref})) . "\""
 			);
 		}
 		
@@ -506,7 +510,8 @@ my $logger = get_logger();
 		if ( $self->get_col_count() != scalar(keys %{$col_names_href}) ) {
 			MyX::Table::NamesNotUniq->throw(
 				error => "Col names not unique\n",
-				dim => "Col"
+				dim => "Col",
+                dups => "\"" . join(",", duplicates(@{$col_names_aref})) . "\""
 			);
 		}
 		
@@ -864,7 +869,8 @@ my $logger = get_logger();
 		if ( $self->get_row_count() != scalar(keys %{$row_names_href}) ) {
 			MyX::Table::NamesNotUniq->throw(
 				error => "Cannot rekey because values in $col_name not uniq\n",
-				dim => "Col"
+				dim => "Col",
+                dups => "\"$col_name\""
 			);
 		}
 		
@@ -905,7 +911,8 @@ my $logger = get_logger();
 		if ( $self->get_col_count() != scalar(keys %{$col_headers_href}) ) {
 			MyX::Table::NamesNotUniq->throw(
 				error => "Cannot rekey because values in $row_name not uniq\n",
-				dim => "Row"
+				dim => "Row",
+                dups => "\"$row_name\""
 			);
 		}
 		
@@ -1098,7 +1105,7 @@ my $logger = get_logger();
 		# make sure the name is not already in the table
 		if ( $self->has_row($row_name) ) {
 			MyX::Table::Row::NameInTable->throw(
-				error => "Name already defined in matrix: $row_name\n",
+				error => "Cannot add row. Row name already defined in matrix\n",
 				name => $row_name
 			);
 		}
@@ -1121,7 +1128,7 @@ my $logger = get_logger();
 		# same as the number of columns in the matrix
 		if ( scalar @{$row_vals_aref} != $self->get_col_count() ) {
 			MyX::Table::BadDim->throw(
-				error => "Number of columns does not equal cols in matrix\n"
+				error => "Number of values in row does not equal cols in matrix\n",
 			);
 		}
 		
@@ -1207,12 +1214,12 @@ my $logger = get_logger();
 		# make sure the name is not already in the table
 		if ( $self->has_col($col_name) ) {
 			MyX::Table::Col::NameInTable->throw(
-				error => "Name already defined in matrix: $col_name\n",
+                error => "Cannot add col. Col name already defined in matrix\n",
 				name => $col_name
 			);
 		}
 		
-		# make sure the row_vals_aref is an aref
+		# make sure the col_vals_aref is an aref
 		_is_aref($col_vals_aref, "col_vals_aref");
 		
 		# if the table is currently empty set the row_count and row_name
@@ -1226,11 +1233,11 @@ my $logger = get_logger();
 			$self->_set_row_names($row_names_aref);
 		}
 		
-		# make sure the number of vals in $row_vals_aref is the
-		# same as the number of columns in the matrix
+		# make sure the number of vals in $col_vals_aref is the
+		# same as the number of rows in the matrix
 		if ( scalar @{$col_vals_aref} != $self->get_row_count() ) {
 			MyX::Table::BadDim->throw(
-				error => "Number of rows does not equal columns in matrix\n"
+				error => "Number of values in column does not equal the matrix row count\n"
 			);
 		}
 		
@@ -1241,7 +1248,7 @@ my $logger = get_logger();
 			# make sure the number of names is the same as the col_count
 			if ( scalar @{$row_names_aref} != $self->get_row_count() ) {
 				MyX::Table::BadDim->throw(
-					error => "Number of row names does not equal columns in matrix\n"
+					error => "Number of row names does not equal rows in matrix\n"
 				);
 			}
 		}
@@ -1289,7 +1296,7 @@ my $logger = get_logger();
 		# ensure the row is actually in the table
 		if ( ! $self->has_row($row_name) ) {
 			MyX::Table::Row::UndefName->throw(
-				error => "Row ($row_name) is not in Table\n",
+				error => "Row is not found in Table\n",
 				name => $row_name
 			);
 		}
@@ -1339,7 +1346,7 @@ my $logger = get_logger();
 		# ensure the row is actually in the table
 		if ( ! $self->has_col($col_name) ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "Col ($col_name) is not in Table\n",
+				error => "Col not found in Table\n",
 				name => $col_name
 			);
 		}
@@ -2282,7 +2289,7 @@ my $logger = get_logger();
 		my $row_href = $row_names_of{ident $self};
 		if ( ! defined $row_href->{$row} ) {
 			MyX::Table::Row::UndefName->throw(
-				error => "Undefined row name: $row\n",
+				error => "Row not found in table\n",
 				name => $row
 			);
 		}
@@ -2300,7 +2307,7 @@ my $logger = get_logger();
 		my $col_href = $col_names_of{ident $self};
 		if ( ! defined $col_href->{$col} ) {
 			MyX::Table::Col::UndefName->throw(
-				error => "Undefined col name: $col\n",
+				error => "Column not found in table\n",
 				name => $col
 			);
 		}

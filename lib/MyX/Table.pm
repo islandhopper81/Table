@@ -13,7 +13,7 @@ use Exception::Class (
     
     'MyX::Table::NamesNotUniq' => {
         isa => 'MyX::Table',
-        fields => ['dim'],
+        fields => ['dim', 'dups'],
     },
     
     'MyX::Table::Row' => {
@@ -77,6 +77,67 @@ use Exception::Class (
     },
     
 );
+
+MyX::Table->Trace(1);
+
+package MyX::Table::BadDim;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message . "Dimension: " . $self->dim;
+    return($msg);
+}
+
+package MyX::Table::Row::UndefName;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message;
+    $msg .= "Row name: " . $self->name;
+
+    return($msg);
+}
+
+package MyX::Table::Col::UndefName;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message;
+    $msg .= "Col name: " . $self->name;
+
+    return($msg);
+}
+
+package MyX::Table::NamesNotUniq;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message;
+    $msg .= "Duplicates: " . $self->dups . "\n";
+    $msg .= "Dimension: " . $self->dim;
+    
+    return($msg);
+}
+
+package MyX::Table::Row::NameInTable;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message;
+    $msg .= "Row name: " . $self->name;
+
+    return($msg);
+}
+
+package MyX::Table::Col::NameInTable;
+sub full_message {
+    my ($self) = @_;
+
+    my $msg = $self->message;
+    $msg .= "Col name: " . $self->name;
+
+    return($msg);
+}
 
 1;
 __END__
