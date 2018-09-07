@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 407;
+use Test::More tests => 411;
 use Test::Exception;
 use MyX::Table;
 use UtilSY qw(:all);
@@ -820,6 +820,34 @@ Q,5,5,4,2,0
     is( $table->to_str(",", "F"), $str2, "to_str(, F)" );
     is( $table->to_str({sep => ",", print_col_header => "F", print_row_names => "F"}),
        $str3, "to_str({sep=>\",\", print_col_header => F, print_row_names => F})" );
+}
+
+# test row_names_to_str
+{
+    # remember this is the current state of table:
+    #A,B,C,D,E
+    #M,0,3,3,5,5
+    #N,2,0,3,5,5
+    #O,3,3,0,4,4
+    #P,5,5,4,0,2
+    #Q,5,5,4,2,0
+
+    is( $table->row_names_to_str(), "M, N, O, P, Q", "row_names_to_str()" );
+    is( $table->row_names_to_str(","), "M,N,O,P,Q", "row_names_to_str(,)" );
+}
+
+# test col_names_to_str
+{
+    # remember this is the current state of table:
+    #A,B,C,D,E
+    #M,0,3,3,5,5
+    #N,2,0,3,5,5
+    #O,3,3,0,4,4
+    #P,5,5,4,0,2
+    #Q,5,5,4,2,0
+
+    is( $table->col_names_to_str(), "A, B, C, D, E", "col_names_to_str()" );
+    is( $table->col_names_to_str(","), "A,B,C,D,E", "col_names_to_str(,)" );
 }
 
 # test rekey_row_names

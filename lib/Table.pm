@@ -73,6 +73,8 @@ my $logger = get_logger();
 	sub rekey_col_headers;
 	sub save;
 	sub to_str;
+    sub row_names_to_str;
+    sub col_names_to_str;
 	sub change_row_name;
 	sub change_col_name;
 	sub add_row;
@@ -1040,6 +1042,22 @@ my $logger = get_logger();
 		
 		return($str);
 	}
+
+    sub row_names_to_str {
+        my ($self, $sep) = @_;
+
+        if ( ! defined $sep ) { $sep = ", "; }
+
+        return(join($sep, @{$self->get_row_names}));
+    }
+
+    sub col_names_to_str {
+        my ($self, $sep) = @_;
+
+        if ( ! defined $sep ) { $sep = ", "; }
+
+        return(join($sep, @{$self->get_col_names}));
+    }
 	
 	sub add_row {
 		my ($self, $row_name, $row_vals_aref, $col_names_aref) = @_;
@@ -2602,6 +2620,8 @@ None reported.
 	rekey_col_headers
 	save
 	to_str
+    row_names_to_str
+    col_names_to_str
     change_row_name
     change_col_name
 	add_row
@@ -3176,6 +3196,34 @@ None reported.
 			  The settings above are the default settings.
 	See Also: NA
 	
+=head2 row_names_to_str
+
+	Title: row_names_to_str
+	Usage: $obj->row_names_to_str(sep)
+	Function: Returns the Table row names as a string
+	Returns: str
+	Args: -sep => delimiter string
+	Throws: NA
+	Comments: The parameters can be used as follows:
+	          sep => ", ",
+			  
+			  The settings above are the default settings.
+	See Also: NA
+
+=head2 col_names_to_str
+
+	Title: col_names_to_str
+	Usage: $obj->col_names_to_str(sep)
+	Function: Returns the Table col names as a string
+	Returns: str
+	Args: -sep => delimiter string
+	Thcols: NA
+	Comments: The parameters can be used as follows:
+	          sep => ", ",
+			  
+			  The settings above are the default settings.
+	See Also: NA
+
 =head2 add_row
 
 	Title: add_row
