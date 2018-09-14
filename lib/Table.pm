@@ -2397,6 +2397,16 @@ Table - Object for storing and operating on a 2D table
 This document describes Table version 0.0.2
 
 
+=head1 INSTALATION
+
+To install this module, run the following commands:
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
+
+
 =head1 SYNOPSIS
 
     use Table;
@@ -3985,45 +3995,13 @@ None reported.
 No bugs have been reported.
 
 Please report any bugs or feature requests to
-C<bug-table@rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org>.
+L<https://github.com/islandhopper81/Table/issues>.
 
-=head1 TO DO
-
-=head2 check what happens with row_name_header when adding rows
-or columns and providing the third argument.
-
-=head2 check for columns without correct number
-
-When I read in the table there could be columns that are not square
-with the rest of columns.
-
-=head2 optimize reset function
-
-I think there is a more efficient way to implement the reset function
-that will explicenetly free up the memory.
-
-=head2 a melt function
-
-Similar to the melt function in R
-
-=head2 Table::Big
-
-Make a Table object that can handle very large tables.  If I can 
-write this on top of C or C++ code to optimize memory and speed
-performance
-
-=head2 Table::Sparse
-
-Make a Table object that can handle sparse tables.
-
-=head2 Optimize merge function
-
-It uses a ton of memory.
 
 =head1 AUTHOR
 
 Scott Yourstone  C<< scott.yourstone81@gmail.com >>
+
 
 =head1 LICENCE AND COPYRIGHT
 
