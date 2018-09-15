@@ -476,8 +476,8 @@ my $logger = get_logger();
 		if ( $self->get_row_count() != scalar(keys %{$row_names_href}) ) {
             my $dup =  join(",", duplicates(@{$row_names_aref}));
 			MyX::Table::NamesNotUniq->throw(
-				error => "Col names not unique\n",
-				dim => "Col",
+				error => "Row names not unique\n",
+				dim => "Row",
                 dups => "\"" . join(",", duplicates(@{$row_names_aref})) . "\""
 			);
 		}
