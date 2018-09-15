@@ -1,5 +1,4 @@
 _build*
-*.gz
 bin/test*
 Build
 MYMETA.json
